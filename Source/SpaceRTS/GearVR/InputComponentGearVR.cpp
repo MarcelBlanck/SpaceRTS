@@ -7,20 +7,19 @@
 
 
 UInputComponentGearVR::UInputComponentGearVR() :
+	BackClickMaxTime(0.25f),
+	BackTimeToLongpress(1.75f),
+	TouchPadAverageCoordSize(100.0f),
+	TapMaxTime(0.25f),
+	DoubleTapTime(0.75f),
+	HoldTime(0.25f),
+	bNotifyRelativeFingerMovement(false),
+	SwipeMaxTime(1.5f),
+	VerticalSwipeMinDistance(80.0f),
+	HorizontalSwipeMinDistance(80.0f),
 	PlayerController(nullptr),
 	TouchDownX(0.f),
 	TouchDownY(0.f),
-	TapHoldAreaMinX(0.f),
-	TapHoldAreaMaxX(0.f),
-	TapHoldAreaMinY(0.f),
-	TapHoldAreaMaxY(0.f),
-	VerticalSwipeCorridorMinX(0.f),
-	VerticalSwipeCorridorMaxX(0.f),
-	HorizontalSwipeCorridorMinY(0.f),
-	HorizontalSwipeCorridorMaxY(0.f),
-	TapHoldMovementToleranceExceeded(false),
-	VerticalSwipeCorridorExceeded(false),
-	HorizontalSwipeCorridorExceeded(false),
 	HoldReported(false),
 	bWasTouchDown(false),
 	SecondsSinceTouchDown(-1.f),
@@ -81,17 +80,7 @@ void UInputComponentGearVR::TickComponent(float DeltaTime, ELevelTick TickType, 
 		bWasTouchDown = true;
 		TouchDownX = X;
 		TouchDownY = Y;
-		TapHoldAreaMinX = X - TapHoldMovementTolerance / 2;
-		TapHoldAreaMaxX = X + TapHoldMovementTolerance / 2;
-		TapHoldAreaMinY = Y - TapHoldMovementTolerance / 2;
-		TapHoldAreaMaxY = Y + TapHoldMovementTolerance / 2;
-		VerticalSwipeCorridorMinX = X - VerticalSwipeCorridorWidth / 2;
-		VerticalSwipeCorridorMaxX = X + VerticalSwipeCorridorWidth / 2;
-		HorizontalSwipeCorridorMinY = Y - HorizontalSwipeCorridorWidth / 2;
-		HorizontalSwipeCorridorMaxY = Y + HorizontalSwipeCorridorWidth / 2;
-		TapHoldMovementToleranceExceeded = false;
-		VerticalSwipeCorridorExceeded = false;
-		HorizontalSwipeCorridorExceeded = false;
+		TouchStationary = true;
 		HoldReported = false;
 		SecondsSinceTouchDown = 0.f;
 	}
@@ -100,9 +89,12 @@ void UInputComponentGearVR::TickComponent(float DeltaTime, ELevelTick TickType, 
 		TouchUp = true;
 	}
 
-	UpdateGestureMovementExceeds(X, Y);
+	if (TouchStationary && (X != TouchDownX || Y != TouchDownY))
+	{
+		TouchStationary = false;
+	}
 
-	if (!TapHoldMovementToleranceExceeded && !HoldReported && SecondsSinceTouchDown > HoldTime)
+	if (TouchStationary && !HoldReported && SecondsSinceTouchDown > HoldTime)
 	{
 		OnHold.Broadcast();
 		HoldReported = true;
@@ -115,7 +107,7 @@ void UInputComponentGearVR::TickComponent(float DeltaTime, ELevelTick TickType, 
 
 	if (TouchUp)
 	{
-		if (SecondsSinceTouchDown < TapMaxTime && !TapHoldMovementToleranceExceeded)
+		if (TouchStationary && SecondsSinceTouchDown < TapMaxTime)
 		{
 			OnSingleTap.Broadcast();
 			float TapRealtimeSeconds = GetWorld()->GetRealTimeSeconds();
@@ -152,27 +144,6 @@ void UInputComponentGearVR::NotifyRelativeFingerMovement(float X, float Y)
 	OnRelativeFingerMovement.Broadcast(RelativeFingerMovement);
 }
 
-void UInputComponentGearVR::UpdateGestureMovementExceeds(float X, float Y)
-{
-	if (!TapHoldMovementToleranceExceeded
-			&& (X < TapHoldAreaMinX || X > TapHoldAreaMaxX || Y < TapHoldAreaMinY || Y > TapHoldAreaMaxY))
-	{
-		TapHoldMovementToleranceExceeded = true;
-	}
-
-	if (!TapHoldMovementToleranceExceeded
-			&& (X < VerticalSwipeCorridorMinX || X > VerticalSwipeCorridorMaxX))
-	{
-		VerticalSwipeCorridorExceeded = true;
-	}
-
-	if (!HorizontalSwipeCorridorExceeded
-			&& (Y < HorizontalSwipeCorridorMinY || Y > HorizontalSwipeCorridorMaxY))
-	{
-		HorizontalSwipeCorridorExceeded = true;
-	}
-}
-
 void UInputComponentGearVR::ReportBackKeyEvents(float DeltaSeconds)
 {
 #if PLATFORM_ANDROID == 1
@@ -182,8 +153,6 @@ void UInputComponentGearVR::ReportBackKeyEvents(float DeltaSeconds)
 	const bool bAndroidBackIsPressed = PlayerController->IsInputKeyDown(EKeys::BackSpace);
 #endif
 
-	UE_LOG(Generic, Warning, TEXT("Android_Back pressed %s"), ((bAndroidBackIsPressed) ? TEXT("true") : TEXT("false")));
-	
 	SecondsSinceAndroidBackPressed += DeltaSeconds;
 
 	if (!bAndroidBackWasPressed && !bAndroidBackIsPressed)
@@ -244,40 +213,34 @@ void UInputComponentGearVR::ReportVolumeChanges()
 
 void UInputComponentGearVR::ReportSwipeEvents(float X, float Y)
 {
-	if (SecondsSinceTouchDown < SwipeMaxTime)
+	if (!TouchStationary && SecondsSinceTouchDown < SwipeMaxTime)
 	{
-		if (!HorizontalSwipeCorridorExceeded)
-		{
-			float SwipedVectorX = TouchDownX - X;
-			float SwipedDistanceX = FMath::Abs(SwipedVectorX);
+		float SwipedVectorX = TouchDownX - X;
+		float SwipedVectorY = TouchDownY - Y;
 
-			if (SwipedDistanceX > HorizontalSwipeMinDistance)
+		float SwipedDistanceX = FMath::Abs(SwipedVectorX);
+		float SwipedDistanceY = FMath::Abs(SwipedVectorY);
+
+		if (SwipedDistanceX > HorizontalSwipeMinDistance && SwipedDistanceX > SwipedDistanceY)
+		{
+			if (SwipedVectorX > 0)
 			{
-				if (SwipedVectorX > 0)
-				{
-					OnSwipeBackward.Broadcast();
-				}
-				else
-				{
-					OnSwipeForward.Broadcast();
-				}
+				OnSwipeBackward.Broadcast();
+			}
+			else
+			{
+				OnSwipeForward.Broadcast();
 			}
 		}
-		else if (!VerticalSwipeCorridorExceeded)
+		else if (SwipedDistanceY > VerticalSwipeMinDistance && SwipedDistanceY > SwipedDistanceX)
 		{
-			float SwipedVectorY = TouchDownY - Y;
-			float SwipedDistanceY = FMath::Abs(SwipedVectorY);
-
-			if (SwipedDistanceY > VerticalSwipeMinDistance)
+			if (SwipedVectorY > 0)
 			{
-				if (SwipedVectorY > 0)
-				{
-					OnSwipeUp.Broadcast();
-				}
-				else
-				{
-					OnSwipeDown.Broadcast();
-				}
+				OnSwipeUp.Broadcast();
+			}
+			else
+			{
+				OnSwipeDown.Broadcast();
 			}
 		}		
 	}

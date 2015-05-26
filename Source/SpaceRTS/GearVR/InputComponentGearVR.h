@@ -57,9 +57,6 @@ public:
 	float TouchPadAverageCoordSize;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Input")
-	float TapHoldMovementTolerance;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Input")
 	float TapMaxTime;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Input")
@@ -78,13 +75,7 @@ public:
 	float VerticalSwipeMinDistance;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Swipe Gestures")
-	float VerticalSwipeCorridorWidth;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Swipe Gestures")
 	float HorizontalSwipeMinDistance;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Swipe Gestures")
-	float HorizontalSwipeCorridorWidth;
 
 	/* Delegate to execute when the Gear VR back button is pressed and released in less than 0.25s */
 	UPROPERTY(BlueprintAssignable)
@@ -153,25 +144,13 @@ private:
 
 	float TouchDownX;
 	float TouchDownY;
+	bool TouchStationary;
 
 	bool bAndroidBackWasPressed;
 	bool bAndroidBackLongpressFired;
 	float SecondsSinceAndroidBackPressed;
 
 	int LastVolume;
-
-	float TapHoldAreaMinX;
-	float TapHoldAreaMaxX;
-	float TapHoldAreaMinY;
-	float TapHoldAreaMaxY;
-	float VerticalSwipeCorridorMinX;
-	float VerticalSwipeCorridorMaxX;
-	float HorizontalSwipeCorridorMinY;
-	float HorizontalSwipeCorridorMaxY;
-
-	bool TapHoldMovementToleranceExceeded;
-	bool VerticalSwipeCorridorExceeded;
-	bool HorizontalSwipeCorridorExceeded;
 
 	bool HoldReported;
 
@@ -181,7 +160,6 @@ private:
 	float LastTapRealtimeSeconds;
 
 	void NotifyRelativeFingerMovement(float X, float Y);
-	void UpdateGestureMovementExceeds(float X, float Y);
 	void ReportBackKeyEvents(float DeltaSeconds);
 	void ReportVolumeChanges();
 	void ReportSwipeEvents(float X, float Y);

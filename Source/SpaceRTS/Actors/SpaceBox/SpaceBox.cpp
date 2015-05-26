@@ -22,6 +22,21 @@ ASpaceBox::ASpaceBox(const FObjectInitializer& ObjectInitializer)
 	SpaceBoxMesh = ObjectInitializer.CreateDefaultSubobject<UStaticMeshComponent>(this, TEXT("SpaceBoxMesh"));
 	SpaceBoxMesh->SetStaticMesh(SpaceBoxMeshFinder.Object);
 	SpaceBoxMesh->SetMobility(EComponentMobility::Movable);
+	SpaceBoxMesh->bCastDynamicShadow = false;
+	SpaceBoxMesh->bTreatAsBackgroundForOcclusion = true;
+	SpaceBoxMesh->bGenerateOverlapEvents = 0;
+	SpaceBoxMesh->bReceivesDecals = 0;
+	SpaceBoxMesh->CastShadow = 0;
+	SpaceBoxMesh->bReturnMaterialOnMove = 0;
+	SpaceBoxMesh->bAffectDynamicIndirectLighting = 0;
+	SpaceBoxMesh->bAffectDistanceFieldLighting = 0;
+	SpaceBoxMesh->bCastStaticShadow = 0;
+	SpaceBoxMesh->bCastVolumetricTranslucentShadow = 0;
+	SpaceBoxMesh->bSelfShadowOnly = 0;
+	SpaceBoxMesh->bCastFarShadow = 0;
+	SpaceBoxMesh->bCastInsetShadow = 0;
+	SpaceBoxMesh->bCastCinematicShadow = 0;
+	SpaceBoxMesh->bCastHiddenShadow = 0;
 	SpaceBoxMesh->SetSimulatePhysics(false);
 	SpaceBoxMesh->bGenerateOverlapEvents = false;
 	SpaceBoxMesh->SetEnableGravity(false);
@@ -38,6 +53,7 @@ void ASpaceBox::OnConstruction(const FTransform& Transform)
 
 	UMaterialInstanceDynamic* MaterialInstance = UMaterialInstanceDynamic::Create(SpaceBoxMaterial, this);
 	MaterialInstance->SetTextureParameterValue("SpaceBoxTexture", Texture);
+	SpaceBoxMesh->SetMaterial(0, MaterialInstance);
 }
 
 void ASpaceBox::Tick(float DeltaTime)
