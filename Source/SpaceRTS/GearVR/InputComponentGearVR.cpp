@@ -3,12 +3,10 @@
 #include "SpaceRTS.h"
 #include "InputComponentGearVR.h"
 
-#include "HAL/PlatformMisc.h"
+
 
 
 UInputComponentGearVR::UInputComponentGearVR() :
-	BackClickMaxTime(0.25f),
-	BackTimeToLongpress(1.75f),
 	TouchPadAverageCoordSize(100.0f),
 	TapMaxTime(0.25f),
 	DoubleTapTime(0.75f),
@@ -41,12 +39,6 @@ void UInputComponentGearVR::BeginPlay()
 		UE_LOG(Generic, Warning, TEXT("The Gesture Recognizer Gear VR Component only works with a connected APlayerController."));
 		return;
 	}
-
-#if PLATFORM_ANDROID == 1
-	// Avoid starting with a volume popup
-	LastVolume = FAndroidMisc::GetMusicStreamVolume();
-	UE_LOG(Generic, Warning, TEXT("Volume initialized to %d"), LastVolume);
-#endif
 }
 
 void UInputComponentGearVR::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -58,9 +50,6 @@ void UInputComponentGearVR::TickComponent(float DeltaTime, ELevelTick TickType, 
 		UE_LOG(Generic, Warning, TEXT("The Gesture Recognizer Gear VR Component only works with a connected APlayerController."));
 		return;
 	}
-
-	ReportBackKeyEvents(DeltaTime);
-	ReportVolumeChanges();
 
 	float X, Y;
 	bool bIsTouchDown;
@@ -134,7 +123,6 @@ void UInputComponentGearVR::TickComponent(float DeltaTime, ELevelTick TickType, 
 	}
 }
 
-
 void UInputComponentGearVR::NotifyRelativeFingerMovement(float X, float Y)
 {
 	FVector2D RelativeFingerMovement (
@@ -142,73 +130,6 @@ void UInputComponentGearVR::NotifyRelativeFingerMovement(float X, float Y)
 		FMath::Clamp((TouchDownY - Y) / TouchPadAverageCoordSize / 2, -1.f, 1.f));
 
 	OnRelativeFingerMovement.Broadcast(RelativeFingerMovement);
-}
-
-void UInputComponentGearVR::ReportBackKeyEvents(float DeltaSeconds)
-{
-#if PLATFORM_ANDROID == 1
-	const bool bAndroidBackIsPressed= PlayerController->IsInputKeyDown(EKeys::Android_Back);
-#else
-	// For editor debugging
-	const bool bAndroidBackIsPressed = PlayerController->IsInputKeyDown(EKeys::BackSpace);
-#endif
-
-	SecondsSinceAndroidBackPressed += DeltaSeconds;
-
-	if (!bAndroidBackWasPressed && !bAndroidBackIsPressed)
-	{
-		// Nothing to do - return right here to speed things up
-		return;
-	}
-	else if (!bAndroidBackWasPressed && bAndroidBackIsPressed)
-	{
-		SecondsSinceAndroidBackPressed = 0.f;
-		bAndroidBackWasPressed = true;
-		bAndroidBackLongpressFired = false;
-	}
-	else if (bAndroidBackWasPressed && bAndroidBackIsPressed)
-	{
-		if (SecondsSinceAndroidBackPressed > BackClickMaxTime && SecondsSinceAndroidBackPressed < BackTimeToLongpress)
-		{
-			float LongPressProgress = FMath::Lerp(0.f, 1.f, (SecondsSinceAndroidBackPressed - BackClickMaxTime) / (BackTimeToLongpress - BackClickMaxTime));
-			OnBackLongpressProgressChanged.Broadcast(LongPressProgress);
-		}
-		else if (!bAndroidBackLongpressFired && SecondsSinceAndroidBackPressed >= BackTimeToLongpress)
-		{
-			// This longpress is reported, release not neccesary
-			OnBackLongpress.Broadcast();		
-			bAndroidBackLongpressFired = true;
-		}
-	}
-	else // Only one remaining case, the release: (bAndroidBackWasPressed && !bAndroidBackIsPressed)
-	{
-		if (SecondsSinceAndroidBackPressed <= BackClickMaxTime)
-		{
-			OnBackClicked.Broadcast();
-		}
-		else if (SecondsSinceAndroidBackPressed > BackClickMaxTime && SecondsSinceAndroidBackPressed < BackTimeToLongpress)
-		{
-			OnBackLongpressAbort.Broadcast();
-		}
-		else // Longpress happened
-		{
-			OnBackLongpressProgressChanged.Broadcast(0.f);
-		}
-		bAndroidBackWasPressed = false;
-	}
-}
-
-void UInputComponentGearVR::ReportVolumeChanges()
-{
-#if PLATFORM_ANDROID == 1
-	int CurrentVolume = FAndroidMisc::GetMusicStreamVolume();
-	if (CurrentVolume != LastVolume)
-	{
-		LastVolume = CurrentVolume;
-		OnVolumeChanged.Broadcast(CurrentVolume);
-		UE_LOG(Generic, Warning, TEXT("Volume changed to %d"), LastVolume);
-	}
-#endif
 }
 
 void UInputComponentGearVR::ReportSwipeEvents(float X, float Y)

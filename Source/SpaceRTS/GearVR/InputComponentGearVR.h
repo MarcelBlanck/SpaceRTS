@@ -12,15 +12,6 @@ class SPACERTS_API UInputComponentGearVR : public UActorComponent
 {
 	GENERATED_BODY()
 
-	/* Back button events */
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBackShortpressDelegate);
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBackLongpressProgressDelegate, float, Progress);
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBackLongpressAbortDelegate);
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBackLongpressDelegate);
-
-	/* Volume events */
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVolumeChangedDelegate, int32, Volume);
-
 	/* Low Level touch input events */
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTouchDownDelegate);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTouchUpDelegate);
@@ -48,12 +39,6 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Input")
-	float BackClickMaxTime;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Input")
-	float BackTimeToLongpress;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Input")
 	float TouchPadAverageCoordSize;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Input")
@@ -77,26 +62,6 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GearVR Swipe Gestures")
 	float HorizontalSwipeMinDistance;
 
-	/* Delegate to execute when the Gear VR back button is pressed and released in less than 0.25s */
-	UPROPERTY(BlueprintAssignable)
-	FBackShortpressDelegate OnBackClicked;
-
-	/* Delegate to execute when the Gear VR back button is pressed longer than 0.25s but shorter than longpress time.
-	 * The Progress will be lineary mapped from 0.0f to 1.0f between these to points in time. */
-	UPROPERTY(BlueprintAssignable)
-	FBackLongpressProgressDelegate OnBackLongpressProgressChanged;
-
-	/* Delegate to execute when the Gear VR back button is released while in the middle between click and locngpress time */
-	UPROPERTY(BlueprintAssignable)
-	FBackLongpressAbortDelegate OnBackLongpressAbort;
-
-	/* Delegate to execute when the Gear VR back button is pressed longer than longpress time. This should start the oculus Platform Activity. */
-	UPROPERTY(BlueprintAssignable)
-	FBackLongpressDelegate OnBackLongpress;
-
-	/** Delegate to execute when the gear VR System Volume changes. This allows to show a popup as user feedback. */
-	UPROPERTY(BlueprintAssignable)
-	FVolumeChangedDelegate OnVolumeChanged;
 
 	/* Delegate to execute when the Gear VR touch pad is touched */
 	UPROPERTY(BlueprintAssignable)
@@ -146,11 +111,7 @@ private:
 	float TouchDownY;
 	bool TouchStationary;
 
-	bool bAndroidBackWasPressed;
-	bool bAndroidBackLongpressFired;
-	float SecondsSinceAndroidBackPressed;
 
-	int LastVolume;
 
 	bool HoldReported;
 
@@ -160,7 +121,5 @@ private:
 	float LastTapRealtimeSeconds;
 
 	void NotifyRelativeFingerMovement(float X, float Y);
-	void ReportBackKeyEvents(float DeltaSeconds);
-	void ReportVolumeChanges();
 	void ReportSwipeEvents(float X, float Y);
 };
