@@ -32,5 +32,5 @@ public:
 	FVolumeChangedDelegate OnVolumeChanged;
 
 private:
-	int LastVolume;
+	int32 LastVolume;
 };

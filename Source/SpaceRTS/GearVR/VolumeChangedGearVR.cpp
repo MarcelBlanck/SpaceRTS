@@ -41,7 +41,7 @@ void UVolumeChangedGearVR::TickComponent(float DeltaTime, ELevelTick TickType, F
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 #if PLATFORM_ANDROID == 1
-	int CurrentVolume = FAndroidMisc::GetMusicStreamVolume();
+	const int32 CurrentVolume = FAndroidMisc::GetMusicStreamVolume();
 	if (CurrentVolume != LastVolume)
 	{
 		LastVolume = CurrentVolume;
@@ -51,10 +51,10 @@ void UVolumeChangedGearVR::TickComponent(float DeltaTime, ELevelTick TickType, F
 #endif
 }
 
-#if PLATFORM_ANDROID == 0
+#if PLATFORM_ANDROID != 1
 void UVolumeChangedGearVR::Debug_VolumePlus()
 {
-	int CurrentVolume = FMath::Clamp(LastVolume + 1, 0, 15);
+	const int32 CurrentVolume = FMath::Clamp(LastVolume + 1, 0, 15);
 	LastVolume = CurrentVolume;
 	OnVolumeChanged.Broadcast(CurrentVolume);
 	UE_LOG(Generic, Warning, TEXT("Volume changed to %d"), LastVolume);
@@ -62,7 +62,7 @@ void UVolumeChangedGearVR::Debug_VolumePlus()
 
 void UVolumeChangedGearVR::Debug_VolumeMinus()
 {
-	int CurrentVolume = FMath::Clamp(LastVolume - 1, 0, 15);
+	const int32 CurrentVolume = FMath::Clamp(LastVolume - 1, 0, 15);
 	LastVolume = CurrentVolume;
 	OnVolumeChanged.Broadcast(CurrentVolume);
 	UE_LOG(Generic, Warning, TEXT("Volume changed to %d"), LastVolume);

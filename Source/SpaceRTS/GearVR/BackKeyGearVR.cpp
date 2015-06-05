@@ -18,10 +18,11 @@ void UBackKeyGearVR::BeginPlay()
 	Owner->EnableInput(PlayerController);
 
 #if PLATFORM_ANDROID == 1
-	InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Pressed, this, &UBackKeyGearVR::AndroidBackPressed);
-	InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Released, this, &UBackKeyGearVR::AndroidBackReleased);
+	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Pressed, this, &UBackKeyGearVR::BackPressed).bConsumeInput = false;
+	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Released, this, &UBackKeyGearVR::BackReleased).bConsumeInput = false;
 #else
 	// Allow debugging with Backspace key
+	UE_LOG(Generic, Warning, TEXT("UBackKeyGearVR registering debug back key E"));
 	Owner->InputComponent->BindKey(EKeys::E, EInputEvent::IE_Pressed, this, &UBackKeyGearVR::BackPressed).bConsumeInput = false;
 	Owner->InputComponent->BindKey(EKeys::E, EInputEvent::IE_Released, this, &UBackKeyGearVR::BackReleased).bConsumeInput = false;
 #endif
@@ -37,8 +38,8 @@ void UBackKeyGearVR::BackPressed()
 
 void UBackKeyGearVR::BackReleased()
 {
-	float BackKeyReleaseTime = GEngine->GetWorldFromContextObject(this)->GetTimeSeconds();
-	if (BackKeyReleaseTime - BackKeyPressTime < 1.25f)
+	const float BackKeyReleaseTime = GEngine->GetWorldFromContextObject(this)->GetTimeSeconds();
+	if (BackKeyReleaseTime - BackKeyPressTime < MaxClickTime)
 	{
 		OnBackClicked.Broadcast();
 	}

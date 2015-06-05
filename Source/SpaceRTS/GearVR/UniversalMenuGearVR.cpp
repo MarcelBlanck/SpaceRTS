@@ -19,12 +19,13 @@ void UUniversalMenuGearVR::BeginPlay()
 	Owner->EnableInput(PlayerController);
 
 #if PLATFORM_ANDROID == 1
-	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Pressed, this, &UBackKeyGearVR::AndroidBackPressed);
-	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Released, this, &UBackKeyGearVR::AndroidBackReleased);
+	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Pressed, this, &UUniversalMenuGearVR::BackPressed).bConsumeInput = false;
+	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Released, this, &UUniversalMenuGearVR::BackReleased).bConsumeInput = false;
 #else
 	// Allow debugging with the BackSpace key
-	Owner->InputComponent->BindKey(EKeys::BackSpace, EInputEvent::IE_Pressed, this, &UUniversalMenuGearVR::BackPressed).bConsumeInput = false;
-	Owner->InputComponent->BindKey(EKeys::BackSpace, EInputEvent::IE_Released, this, &UUniversalMenuGearVR::BackReleased).bConsumeInput = false;
+	UE_LOG(Generic, Warning, TEXT("UUniversalMenuGearVR registering debug back key E"));
+	Owner->InputComponent->BindKey(EKeys::B, EInputEvent::IE_Pressed, this, &UUniversalMenuGearVR::BackPressed).bConsumeInput = false;
+	Owner->InputComponent->BindKey(EKeys::B, EInputEvent::IE_Released, this, &UUniversalMenuGearVR::BackReleased).bConsumeInput = false;
 #endif
 
 	SetComponentTickEnabled(false);
@@ -32,15 +33,18 @@ void UUniversalMenuGearVR::BeginPlay()
 
 void UUniversalMenuGearVR::BackPressed()
 {
-	bBackIsPressed = true;
+	if (!bBackIsPressed)
+	{
+		bBackIsPressed = true;
 
-	UWorld* World = GEngine->GetWorldFromContextObject(this);
-	BackKeyPressTime = World->GetTimeSeconds();
+		UWorld* World = GEngine->GetWorldFromContextObject(this);
+		BackKeyPressTime = World->GetTimeSeconds();
 
-	SecondsSinceBackKeyPressed = 0.f;
-	bOnUniversalMenuTriggered = false;
+		SecondsSinceBackKeyPressed = 0.f;
+		bOnUniversalMenuTriggered = false;
 
-	SetComponentTickEnabled(true); // Tick as long as the key is pressed
+		SetComponentTickEnabled(true); // Tick as long as the key is pressed
+	}
 }
 
 void UUniversalMenuGearVR::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -50,7 +54,6 @@ void UUniversalMenuGearVR::TickComponent(float DeltaTime, ELevelTick TickType, F
 	if (bBackIsPressed)
 	{
 		SecondsSinceBackKeyPressed += DeltaTime;
-
 		if (SecondsSinceBackKeyPressed > UniversalMenuTriggerTimeStart && SecondsSinceBackKeyPressed < UniversalMenuTriggerTimeEnd)
 		{
 			float LongPressProgress = (SecondsSinceBackKeyPressed - UniversalMenuTriggerTimeStart) / (UniversalMenuTriggerTimeEnd - UniversalMenuTriggerTimeStart);
@@ -69,15 +72,7 @@ void UUniversalMenuGearVR::BackReleased()
 {
 	bBackIsPressed = false;
 
-	UWorld* World = GEngine->GetWorldFromContextObject(this);
-	float BackKeyReleaseTime = World->GetTimeSeconds();
-
-	SecondsSinceBackKeyPressed = BackKeyReleaseTime - BackKeyPressTime;
-
-	if (SecondsSinceBackKeyPressed > UniversalMenuTriggerTimeStart && !bOnUniversalMenuTriggered)
-	{
-		OnUniversalMenuAbort.Broadcast();
-	}
+	OnUniversalMenuAbort.Broadcast();
 
 	SetComponentTickEnabled(false); // No reason to tick if the key is not pressed
 }
