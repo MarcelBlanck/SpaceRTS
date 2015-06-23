@@ -9,7 +9,7 @@ UTouchpadGearVR::UTouchpadGearVR() :
 	DoubleTapTime(0.75f),
 	HoldTime(0.25f),
 	bNotifyRelativeFingerMovement(false),
-	SwipeMaxTime(1.5f),
+	SwipeMaxTime(0.8f),
 	VerticalSwipeMinDistance(80.0f),
 	HorizontalSwipeMinDistance(80.0f),
 	PlayerController(nullptr),
@@ -52,15 +52,16 @@ void UTouchpadGearVR::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 	bool bIsTouchDown;
 	PlayerController->GetInputTouchState(ETouchIndex::Type::Touch1, X, Y, bIsTouchDown);
 
-	bool TouchUp = false;
-	SecondsSinceTouchDown += DeltaTime;
-
 	if (!bWasTouchDown && !bIsTouchDown)
 	{
 		// Nothing to do - return right here to speed things up
 		return;
 	}
-	else if (!bWasTouchDown && bIsTouchDown)
+
+	bool TouchUp = false;
+	SecondsSinceTouchDown += DeltaTime;
+	
+	if (!bWasTouchDown && bIsTouchDown)
 	{
 		OnTouchDown.Broadcast();
 		bWasTouchDown = true;
