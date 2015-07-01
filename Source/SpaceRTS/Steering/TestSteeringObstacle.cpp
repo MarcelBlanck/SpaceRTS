@@ -19,28 +19,15 @@ ATestSteeringObstacle::ATestSteeringObstacle(const FObjectInitializer& ObjectIni
 	Mesh->SetStaticMesh(MeshFinder.Object);
 	Mesh->SetMobility(EComponentMobility::Movable);
 	Mesh->bCastDynamicShadow = false;
-	Mesh->bTreatAsBackgroundForOcclusion = true;
-	Mesh->bGenerateOverlapEvents = 0;
-	Mesh->bReceivesDecals = 0;
-	Mesh->CastShadow = 0;
-	Mesh->bReturnMaterialOnMove = 0;
-	Mesh->bAffectDynamicIndirectLighting = 0;
-	Mesh->bAffectDistanceFieldLighting = 0;
-	Mesh->bCastStaticShadow = 0;
-	Mesh->bCastVolumetricTranslucentShadow = 0;
-	Mesh->bSelfShadowOnly = 0;
-	Mesh->bCastFarShadow = 0;
-	Mesh->bCastInsetShadow = 0;
-	Mesh->bCastCinematicShadow = 0;
-	Mesh->bCastHiddenShadow = 0;
+	Mesh->bTreatAsBackgroundForOcclusion = false;
 	Mesh->SetSimulatePhysics(false);
 	Mesh->bGenerateOverlapEvents = false;
 	Mesh->SetEnableGravity(false);
-	Mesh->BodyInstance.bAutoWeld = false;
 	Mesh->BodyInstance.SetInstanceNotifyRBCollision(false);
 	Mesh->BodyInstance.SetCollisionProfileName("NoCollision");
+	Mesh->AttachTo(RootComponent);
 
-	Steering->MaxVelocity = 500.f;
+	Steering->MaxVelocity = 800.f;
 }
 
 void ATestSteeringObstacle::BeginPlay()

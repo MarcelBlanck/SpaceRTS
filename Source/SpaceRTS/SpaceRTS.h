@@ -6,4 +6,4 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(Generic, Log, All);
 
-#define COLLISION_OBSTACLE	ECC_GameTraceChannel1
+#define COLLISION_RADAR_SIGNATURE ECC_GameTraceChannel1

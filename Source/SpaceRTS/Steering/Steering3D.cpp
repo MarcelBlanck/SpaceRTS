@@ -4,6 +4,7 @@
 #include "Steering3D.h"
 
 #include "SteeringObstacle.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 #define RVO_EPSILON 0.00001f
 
@@ -11,8 +12,8 @@
 USteering3D::USteering3D(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer),
     MaxVelocity(4000.f),
-	ScanRadius(1000.f),
-	MaxComputedNeighbors(32),
+	ScanRadius(2200.f),
+	MaxComputedNeighbors(10),
 	TimeHorizon(10.0f)
 {
 	bWantsBeginPlay = true;
@@ -33,23 +34,16 @@ void USteering3D::TickComponent( float DeltaTime, ELevelTick TickType, FActorCom
 	if (Owner == nullptr)
 		return;
 
-	Owner->Velocity = Owner->NewVelocity;
+	Owner->Velocity = Owner->NewVelocity.GetClampedToMaxSize(MaxVelocity);
+	FMath::RInterpTo(Owner->GetActorRotation(), FRotationMatrix::MakeFromX(Owner->Velocity).Rotator(), DeltaTime, 1.0f);
 	Owner->SetActorLocation(Owner->GetActorLocation() + Owner->Velocity * DeltaTime);
 }
 
 bool USteering3D::GetRadarBlipResult(FVector const & OwnerLocation, AActor* Owner, UWorld* World, TArray<FHitResult>& OutHits)
 {
-	FCollisionQueryParams Params;
-	Params.bFindInitialOverlaps = false;
-	Params.bTraceAsyncScene = false;
-	Params.AddIgnoredActor(Owner);
-	Params.bReturnFaceIndex = false;
-	Params.bTraceComplex = false;
-
-	//GetWorld()->DebugDrawTraceTag = "RadarTrace";
-	//DrawDebugSphere(GetWorld(), OwnerLocation, ScanRadius, 32, FColor::Red);
-	
-	return World->SweepMultiByChannel(OutHits, OwnerLocation, OwnerLocation, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(ScanRadius), Params);
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(Owner);
+	return UKismetSystemLibrary::SphereTraceMulti_NEW(World, OwnerLocation, OwnerLocation + Owner->GetActorForwardVector(), ScanRadius, ETraceTypeQuery::TraceTypeQuery3, false, ActorsToIgnore, EDrawDebugTrace::ForOneFrame, OutHits, false);
 }
 
 void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, float DeltaTime)
@@ -61,51 +55,39 @@ void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, fl
 	FVector OwnerVelocity = Owner->Velocity;
 
 	// Check for Obstacles in Range using the Radar
-	TArray<ASteeringObstacle*> ObstaclesInRange;
+	TArray<TPair<ASteeringObstacle*, float>> ObstaclesWithSquaredDistance;
 	int ObstaclesInRangeCount = 0;
-	{
-	
-		for (TActorIterator<ASteeringObstacle> PawnItr(GetWorld()); PawnItr; ++PawnItr)
-		{
-			int32 addindex = ObstaclesInRange.AddUninitialized(1);
-			ObstaclesInRange[addindex] = (*PawnItr);
-			ObstaclesInRangeCount++;
-		}
-	
+	{	
 		TArray<FHitResult> RadarHits;
-		if (GetRadarBlipResult(OwnerLocation, Cast<AActor>(Owner), World, RadarHits))
-		{
-			ObstaclesInRangeCount = RadarHits.Num();
-			ObstaclesInRange.AddUninitialized(ObstaclesInRangeCount);
+		GetRadarBlipResult(OwnerLocation, Cast<AActor>(Owner), World, RadarHits);
+		ObstaclesInRangeCount = RadarHits.Num();
 
+		if (ObstaclesInRangeCount > 0)
+		{
 			for (int32 i = 0; i < ObstaclesInRangeCount; ++i)
 			{
-				ObstaclesInRange[i] = Cast<ASteeringObstacle>(RadarHits[i].Actor.Get());
+				ASteeringObstacle * Obstacle = Cast<ASteeringObstacle>(RadarHits[i].Actor.Get());
+				if (Obstacle != nullptr)
+				{
+					uint32 index = ObstaclesWithSquaredDistance.AddUninitialized();
+					ObstaclesWithSquaredDistance[index].Key = Obstacle;
+					ObstaclesWithSquaredDistance[index].Value = (ObstaclesWithSquaredDistance[index].Key->GetActorLocation() - OwnerLocation).SizeSquared();
+				}
 			}
 		}
-		
+		ObstaclesWithSquaredDistance.Sort(USteering3D::ConstPredicate);
 	}
 
-	if (ObstaclesInRangeCount > 0)
+	int32 ActualObstaclesToCompute = FMath::Min(MaxComputedNeighbors, ObstaclesInRangeCount);
+	for (int32 i = 0; i < ActualObstaclesToCompute; ++i)
 	{
-		UE_LOG(Generic, Warning, TEXT("ObstaclesInRangeCount: %d "), ObstaclesInRangeCount);
-	}
-
-	int ComputedNeighbours = 0;
-	for (int32 i = 0; i < ObstaclesInRangeCount && ComputedNeighbours < MaxComputedNeighbors; ++i)
-	{
-		const ASteeringObstacle * const Obstacle = ObstaclesInRange[i];
-		if (Obstacle == nullptr)
-			continue; // Ignore accidently hit Actors
-
-		ComputedNeighbours++;
+		const ASteeringObstacle * const Obstacle = ObstaclesWithSquaredDistance[i].Key;
 
 		const FVector RelativePosition = Obstacle->GetActorLocation() - OwnerLocation;
 		const FVector RelativeVelocity = OwnerVelocity - Obstacle->Velocity;
-		const float DistanceSquared = RelativePosition.SizeSquared();
+		const float DistanceSquared = ObstaclesWithSquaredDistance[i].Value;
 		const float CombinedRadius = Owner->SignatureRadius + Obstacle->SignatureRadius;
 		const float CombinedRadiusSq = CombinedRadius * CombinedRadius;
-
 
 		FPlane Plane;
 		FVector U(ForceInitToZero);
@@ -145,6 +127,7 @@ void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, fl
 		else
 		{
 			// Collision occured
+			UE_LOG(Generic, Warning, TEXT("Collision occured: Impact depth => %f"), (FMath::Sqrt(DistanceSquared) - CombinedRadius));
 			const float InvDeltaTime = 1.0f / DeltaTime;
 			const FVector W = RelativeVelocity - InvDeltaTime * RelativePosition;
 			const float LengthW = W.Size();

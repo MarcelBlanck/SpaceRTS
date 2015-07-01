@@ -5,6 +5,15 @@
 #include "../Steering/TestSteeringObstacle.h"
 #include "../Steering/Steering3D.h"
 
+
+ATestObstacleAvoidanceLevelScript::ATestObstacleAvoidanceLevelScript() :
+     Super(),
+	 ComputedObstaclesPerFrame(5),
+	 FrameSlices(0U)
+{
+
+}
+
 void ATestObstacleAvoidanceLevelScript::StartCircularTest(FVector Center, float Radius, int32 ObjectCount)
 {
 	float RadDelta = 2 * PI / ObjectCount;
@@ -21,17 +30,16 @@ void ATestObstacleAvoidanceLevelScript::StartCircularTest(FVector Center, float 
 		StartPosition.Y = Center.Y + CircleY;
 		TargetPosition.X = Center.X - Radius * FMath::Cos(RadDelta * (i + 1));
 		TargetPosition.Y = Center.Y - Radius * FMath::Sin(RadDelta * (i + 1));
+		StartPosition.Z = 50.f * FMath::SRand() * ((FMath::RandBool()) ? 1.f : -1.f);
 		FRotator bla = FRotationMatrix::MakeFromX(TargetPosition - StartPosition).Rotator();
 		ATestSteeringObstacle* SteeringObstacle = Cast<ATestSteeringObstacle>(
 			GetWorld()->SpawnActor(ATestSteeringObstacle::StaticClass(),
 			&StartPosition,
 			&bla));
 		SteeringObstacle->TargetPosition = TargetPosition;
-		SteeringObstacle->Color = FVector(FMath::Cos(RadDelta * i), FMath::Sin(RadDelta * i), 0.f);
+		SteeringObstacle->Color = FVector(FMath::Abs(FMath::Cos(RadDelta * i)), FMath::Abs(FMath::Sin(RadDelta * i)), FMath::Sin(RadDelta * i));
 		Obstacles.Add(SteeringObstacle);
 	}
-	
-
 }
 
 void ATestObstacleAvoidanceLevelScript::BeginPlay()
@@ -52,8 +60,14 @@ void ATestObstacleAvoidanceLevelScript::Tick(float DeltaSeconds)
 	if (World == nullptr)
 		return;
 
-	for (ASteeringObstacle* Obstacle : Obstacles)
+	int32 ObstacleCount = Obstacles.Num();
+	FrameSlices = ObstacleCount / ComputedObstaclesPerFrame;
+
+	int32 CurrentComputationGroup = FrameIndex % FrameSlices;
+
+	int32 ComputationGroupOffset = CurrentComputationGroup * ComputedObstaclesPerFrame;
+	for (int32 i = ComputationGroupOffset; i < ObstacleCount && i < ComputationGroupOffset + ComputedObstaclesPerFrame; ++i)
 	{
-		Obstacle->Steering->ComputeNewVelocity(World, Obstacle, DeltaSeconds);
+		Obstacles[i]->Steering->ComputeNewVelocity(World, Obstacles[i], DeltaSeconds);
 	}
 }

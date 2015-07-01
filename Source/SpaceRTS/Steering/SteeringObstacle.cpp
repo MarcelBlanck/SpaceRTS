@@ -18,10 +18,11 @@ ASteeringObstacle::ASteeringObstacle(const FObjectInitializer& ObjectInitializer
 	RadarSignature->SetSimulatePhysics(false);
 	RadarSignature->SetEnableGravity(false);
 	RadarSignature->BodyInstance.bAutoWeld = false;
-	RadarSignature->BodyInstance.SetCollisionProfileName("Obstacle");
-	RadarSignature->AttachTo(RootComponent);
+	//RadarSignature->BodyInstance.SetResponseToChannel = false;
+	RadarSignature->BodyInstance.SetCollisionProfileName("RadarVisible");
+	SetRootComponent(RadarSignature);
 
-	Steering = ObjectInitializer.CreateDefaultSubobject<USteering3D>(this, TEXT("SteeringObstacle"));
+	Steering = ObjectInitializer.CreateDefaultSubobject<USteering3D>(this, TEXT("Steering"));
 }
 
 void ASteeringObstacle::OnConstruction(const FTransform& Transform)
@@ -30,7 +31,7 @@ void ASteeringObstacle::OnConstruction(const FTransform& Transform)
 
 	FVector Origin; FVector BoxExtent;
 	GetActorBounds(false, Origin, BoxExtent);
-	SignatureRadius = 120.0f; // FMath::Sqrt(BoxExtent.X * BoxExtent.X + BoxExtent.Y * BoxExtent.Y + BoxExtent.Z * BoxExtent.Z) / Transform.GetMaximumAxisScale();
+	SignatureRadius = 180.0f; // FMath::Sqrt(BoxExtent.X * BoxExtent.X + BoxExtent.Y * BoxExtent.Y + BoxExtent.Z * BoxExtent.Z) / Transform.GetMaximumAxisScale();
 	RadarSignature->SetSphereRadius(SignatureRadius, false);
 	UE_LOG(Generic, Warning, TEXT("Setting RadarSignature Radius to %f"), SignatureRadius);
 }

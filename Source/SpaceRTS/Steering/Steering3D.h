@@ -18,6 +18,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Radar")
 	float ScanRadius;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Radar")
+	TEnumAsByte<ETraceTypeQuery> TraceType;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Performance")
 	int32 MaxComputedNeighbors;
 
@@ -31,6 +34,11 @@ public:
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
 	void ComputeNewVelocity(UWorld* World, class ASteeringObstacle* Owner, float DeltaTime);
+
+	inline static bool ConstPredicate(const TPair<ASteeringObstacle*, float>& ip1, const TPair<ASteeringObstacle*, float>& ip2)
+	{
+		return (ip1.Value < ip2.Value);
+	}
 
 private:
 	struct FLine
