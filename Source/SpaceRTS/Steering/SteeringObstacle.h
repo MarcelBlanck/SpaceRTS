@@ -11,17 +11,20 @@ class SPACERTS_API ASteeringObstacle : public AActor
 	GENERATED_BODY()
 	
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
-	class UStaticMeshComponent* Mesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Obstacle")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "General")
+	class USceneComponent* Scene;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Steering")
 	class USphereComponent* RadarSignature;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Steering")
 	class USteering3D* Steering;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Obstacle")
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Steering")
 	float SignatureRadius;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Steering")
+	bool IsPrioritySignature;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Steering")
 	FVector TargetPosition;
@@ -35,6 +38,4 @@ public:
 	ASteeringObstacle(const FObjectInitializer& ObjectInitializer);
 
 	virtual void OnConstruction(const FTransform& Transform) override;
-
-	virtual void Tick(float DeltaSeconds) override;
 };

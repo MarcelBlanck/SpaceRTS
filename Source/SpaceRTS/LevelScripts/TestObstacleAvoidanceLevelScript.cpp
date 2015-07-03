@@ -61,7 +61,7 @@ void ATestObstacleAvoidanceLevelScript::Tick(float DeltaSeconds)
 		return;
 
 	int32 ObstacleCount = Obstacles.Num();
-	FrameSlices = ObstacleCount / ComputedObstaclesPerFrame;
+	FrameSlices = FMath::Max(ObstacleCount / ComputedObstaclesPerFrame, 1);
 
 	int32 CurrentComputationGroup = FrameIndex % FrameSlices;
 

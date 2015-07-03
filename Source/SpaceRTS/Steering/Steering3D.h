@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Components/ActorComponent.h"
+#include "SteeringObstacle.h"
 #include "Steering3D.generated.h"
 
 
@@ -35,9 +36,14 @@ public:
 
 	void ComputeNewVelocity(UWorld* World, class ASteeringObstacle* Owner, float DeltaTime);
 
-	inline static bool ConstPredicate(const TPair<ASteeringObstacle*, float>& ip1, const TPair<ASteeringObstacle*, float>& ip2)
+	inline static bool SortByDistanceAndPriority(const TPair<ASteeringObstacle*, float>& ip1, const TPair<ASteeringObstacle*, float>& ip2)
 	{
-		return (ip1.Value < ip2.Value);
+		return (ip1.Value < ip2.Value) || ip1.Key->IsPrioritySignature;
+	}
+
+	inline static bool NotPrioritySignaturePredicate(const TPair<ASteeringObstacle*, float>& ip1)
+	{
+		return !ip1.Key->IsPrioritySignature;
 	}
 
 private:

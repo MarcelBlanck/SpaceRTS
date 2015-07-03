@@ -14,6 +14,9 @@ class SPACERTS_API ATestSteeringObstacle : public ASteeringObstacle
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	class UStaticMeshComponent* Mesh;
+
 	FVector Color;
 
 	ATestSteeringObstacle(const FObjectInitializer& ObjectInitializer);

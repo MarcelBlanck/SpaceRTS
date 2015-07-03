@@ -35,7 +35,7 @@ void USteering3D::TickComponent( float DeltaTime, ELevelTick TickType, FActorCom
 		return;
 
 	Owner->Velocity = Owner->NewVelocity.GetClampedToMaxSize(MaxVelocity);
-	FMath::RInterpTo(Owner->GetActorRotation(), FRotationMatrix::MakeFromX(Owner->Velocity).Rotator(), DeltaTime, 1.0f);
+	Owner->SetActorRotation(FMath::RInterpTo(Owner->GetActorRotation(), FRotationMatrix::MakeFromX(Owner->Velocity).Rotator(), DeltaTime, 1.0f));
 	Owner->SetActorLocation(Owner->GetActorLocation() + Owner->Velocity * DeltaTime);
 }
 
@@ -43,7 +43,8 @@ bool USteering3D::GetRadarBlipResult(FVector const & OwnerLocation, AActor* Owne
 {
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(Owner);
-	return UKismetSystemLibrary::SphereTraceMulti_NEW(World, OwnerLocation, OwnerLocation + Owner->GetActorForwardVector(), ScanRadius, ETraceTypeQuery::TraceTypeQuery3, false, ActorsToIgnore, EDrawDebugTrace::ForOneFrame, OutHits, false);
+	return UKismetSystemLibrary::SphereTraceMulti_NEW(World, OwnerLocation, OwnerLocation + Owner->GetActorForwardVector(), ScanRadius, 
+		ETraceTypeQuery::TraceTypeQuery3, false, ActorsToIgnore, EDrawDebugTrace::None, OutHits, false);
 }
 
 void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, float DeltaTime)
@@ -53,15 +54,17 @@ void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, fl
 
 	FVector OwnerLocation = Owner->GetActorLocation();
 	FVector OwnerVelocity = Owner->Velocity;
+	float OwnerSignatureRadius = Owner->SignatureRadius;
 
 	// Check for Obstacles in Range using the Radar
+	bool PriotitySignatureNear = false;
 	TArray<TPair<ASteeringObstacle*, float>> ObstaclesWithSquaredDistance;
 	int ObstaclesInRangeCount = 0;
 	{	
 		TArray<FHitResult> RadarHits;
 		GetRadarBlipResult(OwnerLocation, Cast<AActor>(Owner), World, RadarHits);
 		ObstaclesInRangeCount = RadarHits.Num();
-
+		
 		if (ObstaclesInRangeCount > 0)
 		{
 			for (int32 i = 0; i < ObstaclesInRangeCount; ++i)
@@ -71,14 +74,21 @@ void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, fl
 				{
 					uint32 index = ObstaclesWithSquaredDistance.AddUninitialized();
 					ObstaclesWithSquaredDistance[index].Key = Obstacle;
-					ObstaclesWithSquaredDistance[index].Value = (ObstaclesWithSquaredDistance[index].Key->GetActorLocation() - OwnerLocation).SizeSquared();
+					ObstaclesWithSquaredDistance[index].Value 
+						= (ObstaclesWithSquaredDistance[index].Key->GetActorLocation() - OwnerLocation).SizeSquared()
+							- (Owner->SignatureRadius + Obstacle->SignatureRadius);
+
+					if (Obstacle->IsPrioritySignature)
+					{
+						PriotitySignatureNear = true;
+					}
 				}
 			}
 		}
-		ObstaclesWithSquaredDistance.Sort(USteering3D::ConstPredicate);
+		ObstaclesWithSquaredDistance.Sort(USteering3D::SortByDistanceAndPriority);
 	}
 
-	int32 ActualObstaclesToCompute = FMath::Min(MaxComputedNeighbors, ObstaclesInRangeCount);
+	int32 ActualObstaclesToCompute = (PriotitySignatureNear) ? ObstaclesInRangeCount : FMath::Min(MaxComputedNeighbors, ObstaclesInRangeCount);
 	for (int32 i = 0; i < ActualObstaclesToCompute; ++i)
 	{
 		const ASteeringObstacle * const Obstacle = ObstaclesWithSquaredDistance[i].Key;
