@@ -17,9 +17,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Steering")
 	class USphereComponent* RadarSignature;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Steering")
-	class USteering3D* Steering;
-
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Steering")
 	float SignatureRadius;
 

@@ -51,7 +51,7 @@ void ATestObstacleAvoidanceLevelScript::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	for (ASteeringObstacle* Obstacle : Obstacles)
+	for (AMoveableSteeringObstacle* Obstacle : Obstacles)
 	{
 		Obstacle->PreferedVelocity = (Obstacle->TargetPosition - Obstacle->GetActorLocation()).GetClampedToMaxSize(Obstacle->Steering->MaxVelocity);
 	}

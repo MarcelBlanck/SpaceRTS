@@ -2,14 +2,11 @@
 
 #pragma once
 
-#include "Steering/SteeringObstacle.h"
+#include "MoveableSteeringObstacle.h"
 #include "TestSteeringObstacle.generated.h"
 
-/**
- * 
- */
 UCLASS()
-class SPACERTS_API ATestSteeringObstacle : public ASteeringObstacle
+class SPACERTS_API ATestSteeringObstacle : public AMoveableSteeringObstacle
 {
 	GENERATED_BODY()
 

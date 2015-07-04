@@ -27,6 +27,6 @@ public:
 	virtual void Tick(float DeltaSeconds) override;	
 
 private:
-	TArray<class ASteeringObstacle*> Obstacles;
+	TArray<class AMoveableSteeringObstacle*> Obstacles;
 	uint32 FrameSlices;
 };

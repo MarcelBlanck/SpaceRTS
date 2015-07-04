@@ -5,12 +5,9 @@
 
 #include "Steering3D.h"
 
-
-// Sets default values
 ASteeringObstacle::ASteeringObstacle(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer),
 	RadarSignature(nullptr),
-	Steering(nullptr),
 	SignatureRadius(1.f),
 	IsPrioritySignature(false)
 {
@@ -25,8 +22,6 @@ ASteeringObstacle::ASteeringObstacle(const FObjectInitializer& ObjectInitializer
 	RadarSignature->BodyInstance.bAutoWeld = false;
 	RadarSignature->BodyInstance.SetCollisionProfileName("RadarVisible");
 	RadarSignature->AttachTo(RootComponent);
-
-	Steering = ObjectInitializer.CreateDefaultSubobject<USteering3D>(this, TEXT("Steering"));
 }
 
 void ASteeringObstacle::OnConstruction(const FTransform& Transform)
