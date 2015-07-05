@@ -1,102 +1,155 @@
-// Pyrite Softworks 2015
+
 
 #include "SpaceRTS.h"
-#include "Steering3D.h"
-
-#include "SteeringObstacle.h"
+#include "SteeringAgentComponent.h"
+#include "SteeringAgentInterface.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-#define RVO_EPSILON 0.00001f
+#define EPSILON 0.00001f
 
 
-USteering3D::USteering3D(const FObjectInitializer& ObjectInitializer) :
+USteeringAgentComponent::USteeringAgentComponent(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer),
-    MaxVelocity(4000.f),
+	MaxVelocity(4000.f),
 	ScanRadius(2200.f),
 	MaxComputedNeighbors(10),
-	TimeHorizon(10.0f)
+	TimeHorizon(10.0f),
+	IsTargetPositionReachedReported(false)
 {
 	bWantsBeginPlay = true;
 	PrimaryComponentTick.bCanEverTick = true;
+
+	SetSimulatePhysics(false);
+	SetEnableGravity(false);
+	BodyInstance.bAutoWeld = false;
+	BodyInstance.SetCollisionProfileName("RadarVisible");
 }
 
-void USteering3D::BeginPlay()
+void USteeringAgentComponent::BeginPlay()
 {
+	Owner = Cast<AActor>(GetOwner());
+	check(Cast<ISteeringAgentInterface>(Owner));
+
 	Super::BeginPlay();
+
 	AddTickPrerequisiteActor(GetWorld()->GetLevelScriptActor());
 }
 
-void USteering3D::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
+void USteeringAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	
+	if (IsSteeringEnabled)
+	{
+		Velocity = NewVelocity.GetClampedToMaxSize(MaxVelocity);
+		Owner->SetActorRotation(FMath::RInterpTo(Owner->GetActorRotation(), FRotationMatrix::MakeFromX(Velocity).Rotator(), DeltaTime, 1.0f));
+		Owner->SetActorLocation(Owner->GetActorLocation() + Velocity * DeltaTime);
+	}
+}
 
-	ASteeringObstacle* Owner = Cast<ASteeringObstacle>(GetOwner());
-	if (Owner == nullptr)
+void USteeringAgentComponent::EnableSteering()
+{
+	IsSteeringEnabled = true;
+}
+
+void USteeringAgentComponent::DisableSteering()
+{
+	IsSteeringEnabled = false;
+}
+
+void USteeringAgentComponent::SetTargetPosition(FVector& NewTargetPosition)
+{
+	TargetPosition = NewTargetPosition;
+}
+
+void USteeringAgentComponent::SetMaxVelocity(float NewMaxVelocity)
+{
+	MaxVelocity = NewMaxVelocity;
+}
+
+void USteeringAgentComponent::CalculatePreferedVelocity()
+{
+	if (IsSteeringEnabled)
+	{
+		PreferedVelocity = (TargetPosition - Owner->GetActorLocation()).GetClampedToMaxSize(MaxVelocity);
+		
+		if (PreferedVelocity.IsNearlyZero())
+		{
+			OnTargetPositionReached.Broadcast();
+			IsTargetPositionReachedReported = true;
+		}
+		else
+		{
+			IsTargetPositionReachedReported = false;
+		}
+
 		return;
-
-	Owner->Velocity = Owner->NewVelocity.GetClampedToMaxSize(MaxVelocity);
-	Owner->SetActorRotation(FMath::RInterpTo(Owner->GetActorRotation(), FRotationMatrix::MakeFromX(Owner->Velocity).Rotator(), DeltaTime, 1.0f));
-	Owner->SetActorLocation(Owner->GetActorLocation() + Owner->Velocity * DeltaTime);
+	}
+	else
+	{
+		PreferedVelocity.Set(0.f, 0.f, 0.f);
+	}	
 }
 
-bool USteering3D::GetRadarBlipResult(FVector const & OwnerLocation, AActor* Owner, UWorld* World, TArray<FHitResult>& OutHits)
+void USteeringAgentComponent::ComputeNewVelocity(UWorld* World, float DeltaTime)
 {
-	TArray<AActor*> ActorsToIgnore;
-	ActorsToIgnore.Add(Owner);
-	return UKismetSystemLibrary::SphereTraceMulti_NEW(World, OwnerLocation, OwnerLocation + Owner->GetActorForwardVector(), ScanRadius, 
-		ETraceTypeQuery::TraceTypeQuery3, false, ActorsToIgnore, EDrawDebugTrace::None, OutHits, false);
-}
+	if (!IsSteeringEnabled)
+	{
+		return;
+	}
 
-void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, float DeltaTime)
-{
 	TArray<FPlane> Planes;
 	const float InvTimeHorizon = 1.0f / TimeHorizon;
 
 	FVector OwnerLocation = Owner->GetActorLocation();
-	FVector OwnerVelocity = Owner->Velocity;
-	float OwnerSignatureRadius = Owner->SignatureRadius;
+	FVector OwnerVelocity = Velocity;
 
 	// Check for Obstacles in Range using the Radar
 	bool PriotitySignatureNear = false;
-	TArray<TPair<ASteeringObstacle*, float>> ObstaclesWithSquaredDistance;
+	TArray<FObstacleProcessingData> ObstaclesInRange;
 	int ObstaclesInRangeCount = 0;
-	{	
+	{
 		TArray<FHitResult> RadarHits;
-		GetRadarBlipResult(OwnerLocation, Cast<AActor>(Owner), World, RadarHits);
+		GetRadarBlipResult(OwnerLocation, World, RadarHits);
 		ObstaclesInRangeCount = RadarHits.Num();
-		
+
 		if (ObstaclesInRangeCount > 0)
 		{
 			for (int32 i = 0; i < ObstaclesInRangeCount; ++i)
 			{
-				ASteeringObstacle * Obstacle = Cast<ASteeringObstacle>(RadarHits[i].Actor.Get());
-				if (Obstacle != nullptr)
+				AActor* HitActor = RadarHits[i].Actor.Get();
+				ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(HitActor);
+				if (SteeringAgent != nullptr)
 				{
-					uint32 index = ObstaclesWithSquaredDistance.AddUninitialized();
-					ObstaclesWithSquaredDistance[index].Key = Obstacle;
-					ObstaclesWithSquaredDistance[index].Value 
-						= (ObstaclesWithSquaredDistance[index].Key->GetActorLocation() - OwnerLocation).SizeSquared()
-							- (Owner->SignatureRadius + Obstacle->SignatureRadius);
-
-					if (Obstacle->IsPrioritySignature)
+					USteeringAgentComponent* Steering = SteeringAgent->GetSteeringAgentComponent();
+					if (Steering != nullptr)
 					{
-						PriotitySignatureNear = true;
+						uint32 index = ObstaclesInRange.AddUninitialized();
+						ObstaclesInRange[index].ObstacleActor = HitActor;
+						ObstaclesInRange[index].Steering = Steering;
+						ObstaclesInRange[index].RelativePosition = HitActor->GetActorLocation() - OwnerLocation;
+						ObstaclesInRange[index].DistanceSquared = (HitActor->GetActorLocation() - OwnerLocation).SizeSquared();
+				
+						if (Steering->IsPrioritySignature)
+						{
+							PriotitySignatureNear = true;
+						}
 					}
 				}
 			}
 		}
-		ObstaclesWithSquaredDistance.Sort(USteering3D::SortByDistanceAndPriority);
+		ObstaclesInRange.Sort(USteeringAgentComponent::SortByDistanceAndPriority);
 	}
 
 	int32 ActualObstaclesToCompute = (PriotitySignatureNear) ? ObstaclesInRangeCount : FMath::Min(MaxComputedNeighbors, ObstaclesInRangeCount);
 	for (int32 i = 0; i < ActualObstaclesToCompute; ++i)
 	{
-		const ASteeringObstacle * const Obstacle = ObstaclesWithSquaredDistance[i].Key;
+		const FObstacleProcessingData& Obstacle = ObstaclesInRange[i];
 
-		const FVector RelativePosition = Obstacle->GetActorLocation() - OwnerLocation;
-		const FVector RelativeVelocity = OwnerVelocity - Obstacle->Velocity;
-		const float DistanceSquared = ObstaclesWithSquaredDistance[i].Value;
-		const float CombinedRadius = Owner->SignatureRadius + Obstacle->SignatureRadius;
+		const FVector RelativePosition = Obstacle.RelativePosition;
+		const FVector RelativeVelocity = OwnerVelocity - Obstacle.Steering->Velocity;
+		const float DistanceSquared = Obstacle.DistanceSquared;
+		const float CombinedRadius = SphereRadius + Obstacle.Steering->SphereRadius;
 		const float CombinedRadiusSq = CombinedRadius * CombinedRadius;
 
 		FPlane Plane;
@@ -110,7 +163,7 @@ void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, fl
 
 			const float DotProduct = FVector::DotProduct(W, RelativePosition);
 
-			if (DotProduct < 0.0f && FMath::Square(DotProduct) > CombinedRadiusSq * LengthSqW) 
+			if (DotProduct < 0.0f && FMath::Square(DotProduct) > CombinedRadiusSq * LengthSqW)
 			{
 				/* Project on cut-off circle. */
 				const float LengthW = FMath::Sqrt(LengthSqW);
@@ -136,8 +189,7 @@ void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, fl
 		}
 		else
 		{
-			// Collision occured
-			UE_LOG(Generic, Warning, TEXT("Collision occured: Impact depth => %f"), (FMath::Sqrt(DistanceSquared) - CombinedRadius));
+			// Collision occured, back away
 			const float InvDeltaTime = 1.0f / DeltaTime;
 			const FVector W = RelativeVelocity - InvDeltaTime * RelativePosition;
 			const float LengthW = W.Size();
@@ -152,15 +204,23 @@ void USteering3D::ComputeNewVelocity(UWorld* World, ASteeringObstacle* Owner, fl
 	}
 
 	// Programms		
-	const int32 PlaneFail = linearProgram3(Planes, MaxVelocity, Owner->PreferedVelocity, false, Owner->NewVelocity);
+	const int32 PlaneFail = ROV2_LinearProgram3(Planes, MaxVelocity, PreferedVelocity, false, NewVelocity);
 
 	if (PlaneFail < Planes.Num())
 	{
-		linearProgram4(Planes, PlaneFail, MaxVelocity, Owner->NewVelocity);
+		ROV2_LinearProgram4(Planes, PlaneFail, MaxVelocity, NewVelocity);
 	}
 }
 
-bool USteering3D::linearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, const FLine &Line, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result)
+bool USteeringAgentComponent::GetRadarBlipResult(FVector const & OwnerLocation, UWorld* World, TArray<FHitResult>& OutHits)
+{
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(Owner);
+	return UKismetSystemLibrary::SphereTraceMulti_NEW(World, OwnerLocation, OwnerLocation + Owner->GetActorForwardVector(), ScanRadius,
+		ETraceTypeQuery::TraceTypeQuery3, false, ActorsToIgnore, EDrawDebugTrace::None, OutHits, false);
+}
+
+bool USteeringAgentComponent::ROV2_LinearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, const FLine &Line, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result)
 {
 	const float DotProduct = FVector::DotProduct(Line.Point, Line.Direction);
 	const float Discriminant = FMath::Square(DotProduct) + FMath::Square(Radius) - Line.Point.SizeSquared();
@@ -180,14 +240,14 @@ bool USteering3D::linearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, co
 		const float Numerator = FVector::DotProduct((Planes[i].Point - Line.Point), Planes[i].Normal);
 		const float Denominator = FVector::DotProduct(Line.Direction, Planes[i].Normal);
 
-		if (FMath::Square(Denominator) <= RVO_EPSILON)
+		if (FMath::Square(Denominator) <= EPSILON)
 		{
 			// Lines line is (almost) parallel to plane i
 			if (Numerator > 0.0f)
 			{
 				return false;
 			}
-			else 
+			else
 			{
 				continue;
 			}
@@ -200,7 +260,7 @@ bool USteering3D::linearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, co
 			// Plane i bounds line on the left
 			LeftT = FMath::Max(LeftT, T);
 		}
-		else 
+		else
 		{
 			// Plane i bounds line on the right
 			RightT = FMath::Max(RightT, T);
@@ -212,7 +272,7 @@ bool USteering3D::linearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, co
 		}
 	}
 
-	if (DirectionOpt) 
+	if (DirectionOpt)
 	{
 		// Optimize direction
 		if (FVector::DotProduct(OptVelocity, Line.Direction) > 0.0f)
@@ -220,13 +280,13 @@ bool USteering3D::linearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, co
 			// Take right extreme
 			Result = Line.Point + RightT * Line.Direction;
 		}
-		else 
+		else
 		{
 			// Take left extreme
 			Result = Line.Point + LeftT * Line.Direction;
 		}
 	}
-	else 
+	else
 	{
 		// Optimize closest Point
 		const float T = FVector::DotProduct(Line.Direction, (OptVelocity - Line.Point));
@@ -239,7 +299,7 @@ bool USteering3D::linearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, co
 		{
 			Result = Line.Point + RightT * Line.Direction;
 		}
-		else 
+		else
 		{
 			Result = Line.Point + T * Line.Direction;
 		}
@@ -248,7 +308,7 @@ bool USteering3D::linearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, co
 	return true;
 }
 
-bool USteering3D::linearProgram2(const TArray<FPlane> &Planes, int32 PlaneNo, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result)
+bool USteeringAgentComponent::ROV2_LinearProgram2(const TArray<FPlane> &Planes, int32 PlaneNo, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result)
 {
 	const float PlaneDist = FVector::DotProduct(Planes[PlaneNo].Point, Planes[PlaneNo].Normal);
 	const float PlaneDistSq = FMath::Square(PlaneDist);
@@ -270,22 +330,22 @@ bool USteering3D::linearProgram2(const TArray<FPlane> &Planes, int32 PlaneNo, fl
 		const FVector PlaneOptVelocity = OptVelocity - FVector::DotProduct(OptVelocity, Planes[PlaneNo].Normal) * Planes[PlaneNo].Normal;
 		const float PlaneOptVelocityLengthSq = PlaneOptVelocity.SizeSquared();
 
-		if (PlaneOptVelocityLengthSq <= RVO_EPSILON) 
+		if (PlaneOptVelocityLengthSq <= EPSILON)
 		{
 			Result = PlaneCenter;
 		}
-		else 
+		else
 		{
 			Result = PlaneCenter + FMath::Sqrt(PlaneRadiusSq / PlaneOptVelocityLengthSq) * PlaneOptVelocity;
 		}
 	}
-	else 
+	else
 	{
 		// Project Point optVelocity on plane PlaneNo
 		Result = OptVelocity + FVector::DotProduct((Planes[PlaneNo].Point - OptVelocity), Planes[PlaneNo].Normal) * Planes[PlaneNo].Normal;
 
 		// If outside planeCircle, project on planeCircle
-		if (Result.SizeSquared() > RadiusSq) 
+		if (Result.SizeSquared() > RadiusSq)
 		{
 			const FVector PlaneResult = Result - PlaneCenter;
 			const float PlaneResultLengthSq = PlaneResult.SizeSquared();
@@ -293,15 +353,15 @@ bool USteering3D::linearProgram2(const TArray<FPlane> &Planes, int32 PlaneNo, fl
 		}
 	}
 
-	for (int32 i = 0; i < PlaneNo; ++i) 
+	for (int32 i = 0; i < PlaneNo; ++i)
 	{
-		if (FVector::DotProduct(Planes[i].Normal, (Planes[i].Point - Result)) > 0.0f) 
+		if (FVector::DotProduct(Planes[i].Normal, (Planes[i].Point - Result)) > 0.0f)
 		{
 			/* Result does not satisfy constraint i. Compute new optimal result.
-			 * Compute intersection line of plane i and plane PlaneNo. */
+			* Compute intersection line of plane i and plane PlaneNo. */
 			FVector CrossProduct = FVector::CrossProduct(Planes[i].Normal, Planes[PlaneNo].Normal);
 
-			if (CrossProduct.SizeSquared() <= RVO_EPSILON)
+			if (CrossProduct.SizeSquared() <= EPSILON)
 			{
 				// Planes PlaneNo and i are (almost) parallel, and plane i fully invalidates plane PlaneNo
 				return false;
@@ -312,7 +372,7 @@ bool USteering3D::linearProgram2(const TArray<FPlane> &Planes, int32 PlaneNo, fl
 			const FVector LineNormal = FVector::CrossProduct(Line.Direction, Planes[PlaneNo].Normal);
 			Line.Point = Planes[PlaneNo].Point + (FVector::DotProduct((Planes[i].Point - Planes[PlaneNo].Point), Planes[i].Normal) / FVector::DotProduct(LineNormal, Planes[i].Normal)) * LineNormal;
 
-			if (!linearProgram1(Planes, i, Line, Radius, OptVelocity, DirectionOpt, Result)) {
+			if (!ROV2_LinearProgram1(Planes, i, Line, Radius, OptVelocity, DirectionOpt, Result)) {
 				return false;
 			}
 		}
@@ -321,7 +381,7 @@ bool USteering3D::linearProgram2(const TArray<FPlane> &Planes, int32 PlaneNo, fl
 	return true;
 }
 
-int32 USteering3D::linearProgram3(const TArray<FPlane> &Planes, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result)
+int32 USteeringAgentComponent::ROV2_LinearProgram3(const TArray<FPlane> &Planes, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result)
 {
 	if (DirectionOpt)
 	{
@@ -333,21 +393,21 @@ int32 USteering3D::linearProgram3(const TArray<FPlane> &Planes, float Radius, co
 		// Optimize closest Point and outside circle
 		Result = OptVelocity.GetSafeNormal() * Radius;
 	}
-	else 
+	else
 	{
 		// Optimize closest Point and inside circle
 		Result = OptVelocity;
 	}
 
 	int32 PlaneCount = Planes.Num();
-	for (size_t i = 0; i < PlaneCount; ++i) 
+	for (size_t i = 0; i < PlaneCount; ++i)
 	{
-		if (FVector::DotProduct(Planes[i].Normal, (Planes[i].Point - Result)) > 0.0f) 
+		if (FVector::DotProduct(Planes[i].Normal, (Planes[i].Point - Result)) > 0.0f)
 		{
 			// Result does not satisfy constraint i. Compute new optimal result
 			const FVector TempResult = Result;
 
-			if (!linearProgram2(Planes, i, Radius, OptVelocity, DirectionOpt, Result))
+			if (!ROV2_LinearProgram2(Planes, i, Radius, OptVelocity, DirectionOpt, Result))
 			{
 				Result = TempResult;
 				return i;
@@ -358,7 +418,7 @@ int32 USteering3D::linearProgram3(const TArray<FPlane> &Planes, float Radius, co
 	return Planes.Num();
 }
 
-void USteering3D::linearProgram4(const TArray<FPlane> &Planes, int32 BeginPlane, float Radius, FVector &Result)
+void USteeringAgentComponent::ROV2_LinearProgram4(const TArray<FPlane> &Planes, int32 BeginPlane, float Radius, FVector &Result)
 {
 	float Distance = 0.0f;
 
@@ -370,13 +430,13 @@ void USteering3D::linearProgram4(const TArray<FPlane> &Planes, int32 BeginPlane,
 			// Result does not satisfy constraint of plane i
 			TArray<FPlane> ProjPlanes;
 
-			for (int32 j = 0; j < i; ++j) 
+			for (int32 j = 0; j < i; ++j)
 			{
 				FPlane Plane;
 
 				const FVector CrossProduct = FVector::CrossProduct(Planes[j].Normal, Planes[i].Normal);
 
-				if (CrossProduct.SizeSquared() <= RVO_EPSILON)
+				if (CrossProduct.SizeSquared() <= EPSILON)
 				{
 					/* Plane i and plane j are (almost) parallel. */
 					if (FVector::DotProduct(Planes[i].Normal, Planes[j].Normal) > 0.0f)
@@ -384,7 +444,7 @@ void USteering3D::linearProgram4(const TArray<FPlane> &Planes, int32 BeginPlane,
 						// Plane i and plane j Point in the same direction
 						continue;
 					}
-					else 
+					else
 					{
 						// Plane i and plane j Point in opposite direction
 						Plane.Point = 0.5f * (Planes[i].Point + Planes[j].Point);
@@ -403,11 +463,11 @@ void USteering3D::linearProgram4(const TArray<FPlane> &Planes, int32 BeginPlane,
 
 			const FVector TempResult = Result;
 
-			if (linearProgram3(ProjPlanes, Radius, Planes[i].Normal, true, Result) < ProjPlanes.Num())
+			if (ROV2_LinearProgram3(ProjPlanes, Radius, Planes[i].Normal, true, Result) < ProjPlanes.Num())
 			{
-				/* This should in principle not happen. 
-				 * The result is by definition already in the feasible region of this linear program. 
-				 * If it fails, it is due to small floating Point error, and the current result is kept. */
+				/* This should in principle not happen.
+				* The result is by definition already in the feasible region of this linear program.
+				* If it fails, it is due to small floating Point error, and the current result is kept. */
 				Result = TempResult;
 			}
 
@@ -415,3 +475,5 @@ void USteering3D::linearProgram4(const TArray<FPlane> &Planes, int32 BeginPlane,
 		}
 	}
 }
+
+

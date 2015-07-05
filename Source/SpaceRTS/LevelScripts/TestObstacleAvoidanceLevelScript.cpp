@@ -2,72 +2,87 @@
 
 #include "SpaceRTS.h"
 #include "TestObstacleAvoidanceLevelScript.h"
-#include "../Steering/TestSteeringObstacle.h"
-#include "../Steering/Steering3D.h"
+#include "../Actors/TestSteeringSpaceship/TestSteeringSpaceship.h"
 
-
-ATestObstacleAvoidanceLevelScript::ATestObstacleAvoidanceLevelScript() :
-     Super(),
-	 ComputedObstaclesPerFrame(5),
-	 FrameSlices(0U)
+void ATestObstacleAvoidanceLevelScript::StartWallTest(FVector Center, float Distance, int32 Rows, int32 Columns)
 {
 
 }
 
-void ATestObstacleAvoidanceLevelScript::StartCircularTest(FVector Center, float Radius, int32 ObjectCount)
+void ATestObstacleAvoidanceLevelScript::StartCircularTest(FVector Center, float Radius, int32 Segments)
 {
-	float RadDelta = 2 * PI / ObjectCount;
+	UWorld* World = GetWorld();
+	check(World);
+	
+	float RadDelta = 2 * PI / Segments;
 	float CircleX;
 	float CircleY;
 	FVector StartPosition(Center);
 	FVector TargetPosition(Center);
 
-	for (int32 i = 0; i < ObjectCount; ++i)
+	for (int32 i = 0; i < Segments; ++i)
 	{
 		CircleX = Radius * FMath::Cos(RadDelta * i);
 		CircleY = Radius * FMath::Sin(RadDelta * i);
+
 		StartPosition.X = Center.X + CircleX;
 		StartPosition.Y = Center.Y + CircleY;
-		TargetPosition.X = Center.X - Radius * FMath::Cos(RadDelta * (i + 1));
-		TargetPosition.Y = Center.Y - Radius * FMath::Sin(RadDelta * (i + 1));
 		StartPosition.Z = 50.f * FMath::SRand() * ((FMath::RandBool()) ? 1.f : -1.f);
-		FRotator bla = FRotationMatrix::MakeFromX(TargetPosition - StartPosition).Rotator();
-		ATestSteeringObstacle* SteeringObstacle = Cast<ATestSteeringObstacle>(
-			GetWorld()->SpawnActor(ATestSteeringObstacle::StaticClass(),
-			&StartPosition,
-			&bla));
-		SteeringObstacle->TargetPosition = TargetPosition;
-		SteeringObstacle->Color = FVector(FMath::Abs(FMath::Cos(RadDelta * i)), FMath::Abs(FMath::Sin(RadDelta * i)), FMath::Sin(RadDelta * i));
-		Obstacles.Add(SteeringObstacle);
+		TargetPosition.X = Center.X - Radius * FMath::Cos(RadDelta * (i + 1));
+		TargetPosition.Y = Center.Y - Radius * FMath::Sin(RadDelta * (i + 1));	
+
+		FRotator LookDirection = FRotationMatrix::MakeFromX(TargetPosition - StartPosition).Rotator();
+		ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(
+			World->SpawnActor(ATestSteeringSpaceship::StaticClass(),
+							  &StartPosition,
+							  &LookDirection));
+		USteeringAgentComponent* SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
+		if (SteeringAgentComponent != nullptr)
+		{
+			SteeringAgentComponent->SetTargetPosition(TargetPosition);
+		}
 	}
 }
 
-void ATestObstacleAvoidanceLevelScript::BeginPlay()
+void ATestObstacleAvoidanceLevelScript::StartSphereTest(FVector Center, float Radius, int32 Segments)
 {
-	Super::BeginPlay();
-}
-
-void ATestObstacleAvoidanceLevelScript::Tick(float DeltaSeconds)
-{
-	Super::Tick(DeltaSeconds);
-
-	for (AMoveableSteeringObstacle* Obstacle : Obstacles)
-	{
-		Obstacle->PreferedVelocity = (Obstacle->TargetPosition - Obstacle->GetActorLocation()).GetClampedToMaxSize(Obstacle->Steering->MaxVelocity);
-	}
-
 	UWorld* World = GetWorld();
-	if (World == nullptr)
-		return;
+	check(World);
 
-	int32 ObstacleCount = Obstacles.Num();
-	FrameSlices = FMath::Max(ObstacleCount / ComputedObstaclesPerFrame, 1);
+	FVector PositionOnSphere;
+	FVector StartPosition(Center);
+	FVector TargetPosition(Center);
 
-	int32 CurrentComputationGroup = FrameIndex % FrameSlices;
+	FRotator LookDirection;
+	ISteeringAgentInterface* SteeringAgent;
+	USteeringAgentComponent* SteeringAgentComponent;
 
-	int32 ComputationGroupOffset = CurrentComputationGroup * ComputedObstaclesPerFrame;
-	for (int32 i = ComputationGroupOffset; i < ObstacleCount && i < ComputationGroupOffset + ComputedObstaclesPerFrame; ++i)
+	float DeltaTheta = PI / Segments;
+	float DeltaPhi = (2 * PI) / Segments;
+
+	for (int j = 1; j < Segments; j++)
 	{
-		Obstacles[i]->Steering->ComputeNewVelocity(World, Obstacles[i], DeltaSeconds);
+		float Theta = DeltaTheta * j;
+
+		for (int i = 0; i < Segments; i++)
+		{
+			float Phi = DeltaPhi * i;
+
+			PositionOnSphere.X = FMath::Sin(Theta) * FMath::Cos(Phi) * Radius;
+			PositionOnSphere.Y = FMath::Sin(Theta) * FMath::Sin(Phi) * Radius,
+			PositionOnSphere.Z = FMath::Cos(Theta) * Radius;
+
+			StartPosition = Center + PositionOnSphere;
+			TargetPosition = Center - PositionOnSphere;
+
+			LookDirection = FRotationMatrix::MakeFromX(TargetPosition - StartPosition).Rotator();
+			SteeringAgent = Cast<ISteeringAgentInterface>(World->SpawnActor(ATestSteeringSpaceship::StaticClass(), &StartPosition, &LookDirection));
+
+			SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
+			if (SteeringAgentComponent != nullptr)
+			{
+				SteeringAgentComponent->SetTargetPosition(TargetPosition);
+			}
+		}
 	}
 }

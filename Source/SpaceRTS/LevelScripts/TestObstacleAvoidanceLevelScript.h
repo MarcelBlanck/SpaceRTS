@@ -2,31 +2,24 @@
 
 #pragma once
 
-#include "LevelScripts/SpaceRTSLevelScriptActor.h"
+#include "../Steering/SteeringLevelScriptActor.h"
 #include "TestObstacleAvoidanceLevelScript.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class SPACERTS_API ATestObstacleAvoidanceLevelScript : public ASpaceRTSLevelScriptActor
+class SPACERTS_API ATestObstacleAvoidanceLevelScript : public ASteeringLevelScriptActor
 {
 	GENERATED_BODY()
 	
 public:
-	UFUNCTION(BlueprintCallable, Category = "Level Logic")
-	void StartCircularTest(FVector Center, float Radius, int32 ShipCount);
+	UFUNCTION(BlueprintCallable, Category = "Testcase Preparation")
+	void StartWallTest(FVector Center, float Distance, int32 Rows, int32 Columns);
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Obstacle Avoidance")
-	int32 ComputedObstaclesPerFrame;
+	UFUNCTION(BlueprintCallable, Category = "Testcase Preparation")
+	void StartCircularTest(FVector Center, float Radius, int32 Segments);
 
-	ATestObstacleAvoidanceLevelScript();
-
-	virtual void BeginPlay() override;
-
-	virtual void Tick(float DeltaSeconds) override;	
-
-private:
-	TArray<class AMoveableSteeringObstacle*> Obstacles;
-	uint32 FrameSlices;
+	UFUNCTION(BlueprintCallable, Category = "Testcase Preparation")
+		void StartSphereTest(FVector Center, float Radius, int32 Segments);
 };
