@@ -25,6 +25,10 @@ public:
 
 	virtual void SetTargetPosition(FVector& TargetPosition);
 
+	virtual void SetFocusActor(AActor* NewFocusActor);
+
+	virtual void ClearFocusActor();
+
 	virtual void SetMaxVelocity(float NewMaxVelocity);
 	
 	virtual void CalculatePreferedVelocity();
@@ -46,6 +50,9 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Steering")
 	FVector TargetPosition;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Steering")
+	AActor* FocusActor;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Radar")
 	float ScanRadius;

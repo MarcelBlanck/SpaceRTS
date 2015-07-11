@@ -14,7 +14,8 @@ USteeringAgentComponent::USteeringAgentComponent(const FObjectInitializer& Objec
 	ScanRadius(2200.f),
 	MaxComputedNeighbors(10),
 	TimeHorizon(10.0f),
-	IsTargetPositionReachedReported(false)
+	IsTargetPositionReachedReported(false),
+	FocusActor(nullptr)
 {
 	bWantsBeginPlay = true;
 	PrimaryComponentTick.bCanEverTick = true;
@@ -33,6 +34,8 @@ void USteeringAgentComponent::BeginPlay()
 	Super::BeginPlay();
 
 	AddTickPrerequisiteActor(GetWorld()->GetLevelScriptActor());
+
+	TargetPosition = Owner->GetActorLocation();
 }
 
 void USteeringAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -42,8 +45,22 @@ void USteeringAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	if (IsSteeringEnabled)
 	{
 		Velocity = NewVelocity.GetClampedToMaxSize(MaxVelocity);
-		Owner->SetActorRotation(FMath::RInterpTo(Owner->GetActorRotation(), FRotationMatrix::MakeFromX(Velocity).Rotator(), DeltaTime, 1.0f));
-		Owner->SetActorLocation(Owner->GetActorLocation() + Velocity * DeltaTime);
+		if (!Velocity.IsNearlyZero())
+		{
+			Owner->SetActorLocation(Owner->GetActorLocation() + Velocity * DeltaTime);
+
+			if (FocusActor == nullptr)
+			{
+				Owner->SetActorRotation(FMath::RInterpTo(Owner->GetActorRotation(),
+					FRotationMatrix::MakeFromX(Velocity).Rotator(), DeltaTime, 1.0f));
+			}
+		}
+
+		if (FocusActor != nullptr)
+		{
+			Owner->SetActorRotation(FMath::RInterpTo(Owner->GetActorRotation(), 
+				FRotationMatrix::MakeFromX(FocusActor->GetActorLocation() -  Owner->GetActorLocation()).Rotator(), DeltaTime, 1.0f));
+		}
 	}
 }
 
@@ -60,6 +77,16 @@ void USteeringAgentComponent::DisableSteering()
 void USteeringAgentComponent::SetTargetPosition(FVector& NewTargetPosition)
 {
 	TargetPosition = NewTargetPosition;
+}
+
+void USteeringAgentComponent::SetFocusActor(AActor* NewFocusActor)
+{
+	FocusActor = NewFocusActor;
+}
+
+void USteeringAgentComponent::ClearFocusActor()
+{
+	FocusActor = nullptr;
 }
 
 void USteeringAgentComponent::SetMaxVelocity(float NewMaxVelocity)
