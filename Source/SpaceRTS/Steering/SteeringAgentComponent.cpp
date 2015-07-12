@@ -47,19 +47,23 @@ void USteeringAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType
 		Velocity = NewVelocity.GetClampedToMaxSize(MaxVelocity);
 		if (!Velocity.IsNearlyZero())
 		{
-			Owner->SetActorLocation(Owner->GetActorLocation() + Velocity * DeltaTime);
+			float DotToTargetPosition = FVector::DotProduct((TargetPosition - Owner->GetActorLocation()).GetSafeNormal(), Owner->GetActorForwardVector());
+			if (DotToTargetPosition > 0.75)
+			{
+				Owner->SetActorLocation(Owner->GetActorLocation() + Velocity * DeltaTime);
+			}
 
 			if (FocusActor == nullptr)
 			{
 				Owner->SetActorRotation(FMath::RInterpTo(Owner->GetActorRotation(),
-					FRotationMatrix::MakeFromX(Velocity).Rotator(), DeltaTime, 1.0f));
+					FRotationMatrix::MakeFromX(Velocity).Rotator(), DeltaTime, 0.5f));
 			}
 		}
 
 		if (FocusActor != nullptr)
 		{
 			Owner->SetActorRotation(FMath::RInterpTo(Owner->GetActorRotation(), 
-				FRotationMatrix::MakeFromX(FocusActor->GetActorLocation() -  Owner->GetActorLocation()).Rotator(), DeltaTime, 1.0f));
+				FRotationMatrix::MakeFromX(FocusActor->GetActorLocation() -  Owner->GetActorLocation()).Rotator(), DeltaTime, 0.5f));
 		}
 	}
 }

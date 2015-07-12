@@ -16,7 +16,11 @@ ASteeringLevelScriptActor::ASteeringLevelScriptActor(const FObjectInitializer& O
 void ASteeringLevelScriptActor::BeginPlay()
 {
 	Super::BeginPlay();
-
+	APlayerController* TargetPC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+	if (TargetPC)
+	{
+		TargetPC->ConsoleCommand(TEXT("t.MaxFPS=60"), true);
+	}
 }
 
 void ASteeringLevelScriptActor::EndPlay(const EEndPlayReason::Type EndPlayReason)

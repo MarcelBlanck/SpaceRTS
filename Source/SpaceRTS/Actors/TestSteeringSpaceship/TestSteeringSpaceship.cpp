@@ -41,3 +41,18 @@ ATestSteeringSpaceship::ATestSteeringSpaceship(const FObjectInitializer& ObjectI
 
 	SteeringAgentComponent->SetSphereRadius(420.f);
 }
+
+ESelectableObjectType ATestSteeringSpaceship::GetType()
+{
+	return (FMath::RandBool()) ? ESelectableObjectType::PlayerControlledSpaceship : ESelectableObjectType::EnemySpaceship;
+}
+
+void ATestSteeringSpaceship::Select()
+{
+	// Spawn Selection Display
+}
+
+void ATestSteeringSpaceship::ExecuteNative_AttackObject(const TScriptInterface<ISelectableObject>& Object)
+{
+	UE_LOG(Generic, Warning, TEXT("TADADA"));
+}
