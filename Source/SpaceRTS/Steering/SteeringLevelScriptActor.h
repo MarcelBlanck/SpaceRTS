@@ -32,9 +32,9 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	virtual void RegisterSteeringAgent(ISteeringAgentInterface* SteeringAgent);
+	void RegisterSteeringAgent(ISteeringAgentInterface* SteeringAgent);
 
-	virtual void UnregisterSteeringAgent(ISteeringAgentInterface* SteeringAgent);
+	void UnregisterSteeringAgent(ISteeringAgentInterface* SteeringAgent);
 
 private:
 	TArray<ISteeringAgentInterface*> SteeringAgentList;

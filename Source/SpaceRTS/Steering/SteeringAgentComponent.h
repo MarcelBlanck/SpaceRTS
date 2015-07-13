@@ -19,21 +19,21 @@ public:
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	virtual void EnableSteering();
+	void EnableSteering();
 
-	virtual void DisableSteering();
+	void DisableSteering();
 
-	virtual void SetTargetPosition(FVector& TargetPosition);
+	void SetTargetPosition(FVector& TargetPosition);
 
-	virtual void SetFocusActor(AActor* NewFocusActor);
+	void SetFocusActor(AActor* NewFocusActor);
 
-	virtual void ClearFocusActor();
+	void ClearFocusActor();
 
-	virtual void SetMaxVelocity(float NewMaxVelocity);
+	void SetMaxVelocity(float NewMaxVelocity);
 	
-	virtual void CalculatePreferedVelocity();
+	void CalculatePreferedVelocity();
 
-	virtual void ComputeNewVelocity(UWorld* World, float DeltaTime);
+	void ComputeNewVelocity(UWorld* World, float DeltaTime);
 
 	UPROPERTY(BlueprintAssignable)
 	FTargetPositionReachedDelegate OnTargetPositionReached;

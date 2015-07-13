@@ -3,6 +3,7 @@
 #include "SpaceRTS.h"
 #include "PlayerPawn.h"
 #include "Interfaces/SelectableObject.h"
+#include "Interfaces/PlayerControlledSpaceship.h"
 #include "PaperFlipbook.h"
 #include "Kismet/HeadMountedDisplayFunctionLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -43,6 +44,11 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 	Recticle->SetSpriteColor(RecticleColorNeutral);
 	Recticle->Stop();
 
+	ActionIndicator = ObjectInitializer.CreateDefaultSubobject<UActionIndicationGizmo>(this, TEXT("ActionIndicator"));
+	ActionIndicator->GetOnEngageMovementDelegate().AddDynamic(this, &APlayerPawn::OnEngageMovement);
+	ActionIndicator->GetOnEngageAttackDelegate().AddDynamic(this, &APlayerPawn::OnEngageAttack);
+	ActionIndicator->GetOnEngageInteractionDelegate().AddDynamic(this, &APlayerPawn::OnEngageInteraction);
+
 	SteeringAgentComponent->DisableSteering();
 }
 
@@ -77,6 +83,15 @@ void APlayerPawn::Tick(float DeltaSeconds)
 	}
 
 	UpdateLookAtActorAndRecticle();
+
+	if (ActionIndicator->IsActionIndicationEnabled())
+	{
+		ActionIndicator->UpdateGizmoRepresentation(
+			Camera->GetComponentLocation(),
+			Camera->GetComponentRotation(), 
+			SelectedActor.Get(),
+			CurrentLookAtActor.Get());
+	}
 }
 
 
@@ -92,7 +107,16 @@ void APlayerPawn::SetupPlayerInputComponent(UInputComponent* InputComponent)
 
 void APlayerPawn::OnLookInteraction()
 {
-	SelectedActor = CurrentLookAtActor;
+	UE_LOG(Generic, Warning, TEXT("TADADA"));
+	if (!SelectedActor.IsValid() && CurrentLookAtActor.IsValid())
+	{
+		SelectedActor = CurrentLookAtActor;
+		ActionIndicator->EnableActionIndication();
+	}
+	else if (ActionIndicator->IsActionIndicationEnabled())
+	{
+		ActionIndicator->EnterSuccessiveState();
+	}
 }
 
 void APlayerPawn::OnLookRight(float Value)
@@ -130,8 +154,6 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 		float HitDistance = (HitData.ImpactPoint - Start).Size();
 		Recticle->SetRelativeLocation(FVector(HitDistance, 0.f, 0.f));
 		Recticle->SetRelativeScale3D(FVector(HitDistance / RecticleDefaultDistance));
-
-		
 
 		if (bLookAtActorHasChanged)
 		{
@@ -181,4 +203,29 @@ void APlayerPawn::ApplyOrientationFromHMD()
 	UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(DeviceRotation, DevicePosition);
 
 	Camera->SetRelativeRotation(DeviceRotation);
+}
+
+void APlayerPawn::OnEngageMovement(FVector TargetPosition)
+{
+	if (SelectedActor.IsValid())
+	{
+
+
+	}
+}
+
+void APlayerPawn::OnEngageAttack(AActor* TargetActor)
+{
+	if (SelectedActor.IsValid())
+	{
+
+	}
+}
+
+void APlayerPawn::OnEngageInteraction(AActor* TargetActor)
+{
+	if (SelectedActor.IsValid())
+	{
+		IPlayerControlledSpaceship* Interface = Cast<IPlayerControlledSpaceship>(SelectedActor.Get());
+	}
 }

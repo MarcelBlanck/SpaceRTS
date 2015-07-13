@@ -4,6 +4,7 @@
 
 #include "Steering/SteeringAgentPawn.h"
 #include "PaperFlipbookComponent.h"
+#include "ActionIndicationGizmo.h"
 #include "PlayerPawn.generated.h"
 
 /**
@@ -20,6 +21,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 	UPaperFlipbookComponent* Recticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	UActionIndicationGizmo* ActionIndicator;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	float MaxInteractionDistance;
@@ -54,6 +58,12 @@ public:
 	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaSeconds) override;
+
+	void OnEngageMovement(FVector TargetPosition);
+
+	void OnEngageAttack(AActor* TargetActor);
+
+	void OnEngageInteraction(AActor* TargetActor);
 
 protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;

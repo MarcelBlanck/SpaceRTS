@@ -3,6 +3,7 @@
 
 #include "Components/ActorComponent.h"
 #include "GameFramework/Actor.h"
+#include "Delegate.h"
 #include "ActionIndicationGizmo.generated.h"
 
 
@@ -12,11 +13,15 @@ class SPACERTS_API UActionIndicationGizmo : public UActorComponent
 {
 	GENERATED_BODY()
 
-	//DECLARE_MULTICAST_DELEGATE_TwoParams(FEngageMovementDelegate, AActor*, FVector);
-	//DECLARE_MULTICAST_DELEGATE_TwoParams(FOnEngageAttack, AActor*, AActor*)
-	//DECLARE_MULTICAST_DELEGATE_TwoParams(FEngageInteractionDelegate, AActor*, AActor*);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEngageMovement, FVector, TargetPosition);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEngageAttack, AActor*, TargetActor);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEngageInteraction, AActor*, TargetActor);
+
 public:
 	UActionIndicationGizmo();
+
+	UFUNCTION(BlueprintCallable, Category = Updating)
+	bool IsActionIndicationEnabled();
 
 	UFUNCTION(BlueprintCallable, Category = Updating)
 	void EnableActionIndication();
@@ -29,15 +34,21 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = Updating)
 	void EnterSuccessiveState();
+
+	UFUNCTION(BlueprintCallable, Category = Updating)
+	bool TryEnterPreviousState();
 	
-	//UPROPERTY(BlueprintAssignable)
-	//FEngageMovementDelegate OnEngageMovement;
+	UPROPERTY(BlueprintAssignable)
+	FOnEngageMovement OnEngageMovement;
+	FOnEngageMovement& GetOnEngageMovementDelegate();
 
-	//UPROPERTY(BlueprintAssignable)
-	//FOnEngageAttack OnEngageAttack;
+	UPROPERTY(BlueprintAssignable)
+	FOnEngageAttack OnEngageAttack;
+	FOnEngageAttack& GetOnEngageAttackDelegate();
 
-	//UPROPERTY(BlueprintAssignable)
-	//FEngageInteractionDelegate OnEngageInteraction;
+	UPROPERTY(BlueprintAssignable)
+	FOnEngageInteraction OnEngageInteraction;
+	FOnEngageInteraction& GetOnEngageInteractionDelegate();
 
 private:
 	enum class GizmoStage
@@ -54,10 +65,18 @@ private:
 	};
 
 	GizmoStage CurrentGizmoStage;
+	GizmoStage StoredGizmoStage;
 
 	AActor* OriginActor;
 	AActor* KinkActor;
 	AActor* EndActor;
 
 	AActor* EndFollowActor;
+		
+	UParticleSystem* ActionIndicationParticleSystem;
+	UParticleSystemComponent* ActionIndicationMain;
+	UParticleSystemComponent* ActionIndicationAfterKink;
+
+	void EnableOnlyActionIndicationMain();
+	void EnableBothActionIndications();
 };
