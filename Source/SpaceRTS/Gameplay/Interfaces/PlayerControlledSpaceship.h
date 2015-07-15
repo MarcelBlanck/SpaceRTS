@@ -23,7 +23,7 @@ class UPlayerControlledSpaceshipBPFunctionLibrary : public UBlueprintFunctionLib
 	static void InteractWithObject(AActor *Actor, const TScriptInterface<ISelectableObject>& Object);
 
 	UFUNCTION(BlueprintCallable, Category = "Player Controlled Spaceship")
-	static void SteerToLocation(AActor *Actor, FVector& Location);
+	static void SteerToLocation(AActor *Actor, FVector Location);
 };
 
 class IPlayerControlledSpaceship 
@@ -40,5 +40,5 @@ class IPlayerControlledSpaceship
 
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Steer To Location"), Category = "Player Controlled Spaceship")
 	void SteerToLocation(FVector &Location);
-	virtual void ExecuteNative_SteerToLocation(FVector &Location);
+	virtual void ExecuteNative_SteerToLocation(FVector Location);
 };

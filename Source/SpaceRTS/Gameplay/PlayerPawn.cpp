@@ -45,9 +45,8 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 	Recticle->Stop();
 
 	ActionIndicator = ObjectInitializer.CreateDefaultSubobject<UActionIndicationGizmo>(this, TEXT("ActionIndicator"));
-	ActionIndicator->GetOnEngageMovementDelegate().AddDynamic(this, &APlayerPawn::OnEngageMovement);
-	ActionIndicator->GetOnEngageAttackDelegate().AddDynamic(this, &APlayerPawn::OnEngageAttack);
-	ActionIndicator->GetOnEngageInteractionDelegate().AddDynamic(this, &APlayerPawn::OnEngageInteraction);
+
+	TouchpadGearVR = ObjectInitializer.CreateDefaultSubobject<UTouchpadGearVR>(this, TEXT("TouchpadGearVR"));
 
 	SteeringAgentComponent->DisableSteering();
 }
@@ -69,6 +68,14 @@ void APlayerPawn::BeginPlay()
 	Super::BeginPlay();
 
 	EnableInput(GetWorld()->GetFirstPlayerController());
+
+	OnEngageMovmentDelegate.BindUFunction(this, TEXT("OnEngageMovement"));
+	ActionIndicator->GetOnEngageMovementDelegate().Add(OnEngageMovmentDelegate);
+	//ActionIndicator->GetOnEngageAttackDelegate().AddDynamic(this, &APlayerPawn::OnEngageAttack);
+	//ActionIndicator->GetOnEngageInteractionDelegate().AddDynamic(this, &APlayerPawn::OnEngageInteraction);
+
+	OnGearVRTouchpadTapDelegate.BindUFunction(this, TEXT("OnLookInteraction"));
+	TouchpadGearVR->OnSingleTap.Add(OnGearVRTouchpadTapDelegate);
 }
 
 void APlayerPawn::Tick(float DeltaSeconds)
@@ -110,6 +117,7 @@ void APlayerPawn::OnLookInteraction()
 	UE_LOG(Generic, Warning, TEXT("TADADA"));
 	if (!SelectedActor.IsValid() && CurrentLookAtActor.IsValid())
 	{
+		ActionIndicator->DisableActionIndication();
 		SelectedActor = CurrentLookAtActor;
 		ActionIndicator->EnableActionIndication();
 	}
@@ -209,8 +217,8 @@ void APlayerPawn::OnEngageMovement(FVector TargetPosition)
 {
 	if (SelectedActor.IsValid())
 	{
-
-
+		UPlayerControlledSpaceshipBPFunctionLibrary::SteerToLocation(SelectedActor.Get(), TargetPosition);
+		SelectedActor.Reset();
 	}
 }
 
@@ -218,7 +226,7 @@ void APlayerPawn::OnEngageAttack(AActor* TargetActor)
 {
 	if (SelectedActor.IsValid())
 	{
-
+		IPlayerControlledSpaceship* Interface = Cast<IPlayerControlledSpaceship>(SelectedActor.Get());
 	}
 }
 

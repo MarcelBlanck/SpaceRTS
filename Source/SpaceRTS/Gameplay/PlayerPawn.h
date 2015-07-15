@@ -5,6 +5,7 @@
 #include "Steering/SteeringAgentPawn.h"
 #include "PaperFlipbookComponent.h"
 #include "ActionIndicationGizmo.h"
+#include "../GearVR/TouchpadGearVR.h"
 #include "PlayerPawn.generated.h"
 
 /**
@@ -24,6 +25,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 	UActionIndicationGizmo* ActionIndicator;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	UTouchpadGearVR* TouchpadGearVR;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	float MaxInteractionDistance;
@@ -59,10 +63,13 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	UFUNCTION()
 	void OnEngageMovement(FVector TargetPosition);
 
+	UFUNCTION()
 	void OnEngageAttack(AActor* TargetActor);
 
+	UFUNCTION()
 	void OnEngageInteraction(AActor* TargetActor);
 
 protected:
@@ -79,6 +86,10 @@ private:
 
 	TWeakObjectPtr<class AActor> CurrentLookAtActor;
 	TWeakObjectPtr<class AActor> SelectedActor;
+
+	TScriptDelegate<FWeakObjectPtr> OnEngageMovmentDelegate;
+
+	TScriptDelegate<FWeakObjectPtr> OnGearVRTouchpadTapDelegate;
 
 	void ApplyOrientationFromHMD();
 	void UpdateLookAtActorAndRecticle();

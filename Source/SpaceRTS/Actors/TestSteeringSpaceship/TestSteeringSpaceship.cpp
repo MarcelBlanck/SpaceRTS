@@ -38,7 +38,6 @@ ATestSteeringSpaceship::ATestSteeringSpaceship(const FObjectInitializer& ObjectI
 	Mesh->AttachTo(RootComponent);
 
 	SteeringAgentComponent->SetMaxVelocity(1600.f);
-
 	SteeringAgentComponent->SetSphereRadius(420.f);
 }
 
@@ -55,4 +54,9 @@ void ATestSteeringSpaceship::Select()
 void ATestSteeringSpaceship::ExecuteNative_AttackObject(const TScriptInterface<ISelectableObject>& Object)
 {
 	UE_LOG(Generic, Warning, TEXT("TADADA"));
+}
+
+void ATestSteeringSpaceship::ExecuteNative_SteerToLocation(FVector Location)
+{
+	SteeringAgentComponent->SetTargetPosition(Location);
 }

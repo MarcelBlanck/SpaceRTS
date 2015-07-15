@@ -23,6 +23,8 @@ public:
 	virtual void Select() override;
 
 	virtual void ExecuteNative_AttackObject(const TScriptInterface<ISelectableObject>& Object) override;
+	
+	virtual void ExecuteNative_SteerToLocation(FVector Location) override;
 
 private:
 	class UMaterial* Material;

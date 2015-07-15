@@ -39,7 +39,7 @@ void UPlayerControlledSpaceshipBPFunctionLibrary::InteractWithObject(AActor *Act
 	}
 }
 
-void UPlayerControlledSpaceshipBPFunctionLibrary::SteerToLocation(AActor *Actor, FVector& Location)
+void UPlayerControlledSpaceshipBPFunctionLibrary::SteerToLocation(AActor *Actor, FVector Location)
 {
 	IPlayerControlledSpaceship* Interface = Cast<IPlayerControlledSpaceship>(Actor);
 	if (Interface != nullptr)
@@ -62,7 +62,7 @@ void IPlayerControlledSpaceship::ExecuteNative_InteractWithObject(const TScriptI
 	// Nothing to do here
 }
 
-void IPlayerControlledSpaceship::ExecuteNative_SteerToLocation(FVector& Location)
+void IPlayerControlledSpaceship::ExecuteNative_SteerToLocation(FVector Location)
 {
 	// Nothing to do here
 }

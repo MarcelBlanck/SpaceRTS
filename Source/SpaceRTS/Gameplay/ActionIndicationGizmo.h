@@ -19,6 +19,9 @@ class SPACERTS_API UActionIndicationGizmo : public UActorComponent
 
 public:
 	UActionIndicationGizmo();
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Indication Parameters")
+	float IndicationSeconds;
 
 	UFUNCTION(BlueprintCallable, Category = Updating)
 	bool IsActionIndicationEnabled();
@@ -77,6 +80,10 @@ private:
 	UParticleSystemComponent* ActionIndicationMain;
 	UParticleSystemComponent* ActionIndicationAfterKink;
 
+	float IndicationDeactivationTime;
+
 	void EnableOnlyActionIndicationMain();
 	void EnableBothActionIndications();
+
+	void EndIndication();
 };
