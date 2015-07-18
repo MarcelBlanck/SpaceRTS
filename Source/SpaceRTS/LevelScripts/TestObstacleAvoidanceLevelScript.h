@@ -21,5 +21,5 @@ public:
 	void StartCircularTest(FVector Center, float Radius, int32 Segments);
 
 	UFUNCTION(BlueprintCallable, Category = "Testcase Preparation")
-		void StartSphereTest(FVector Center, float Radius, int32 Segments);
+	void StartSphereTest(FVector Center, float Radius, int32 Segments);
 };

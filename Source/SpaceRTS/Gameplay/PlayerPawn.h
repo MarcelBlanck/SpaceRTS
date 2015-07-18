@@ -8,9 +8,7 @@
 #include "../GearVR/TouchpadGearVR.h"
 #include "PlayerPawn.generated.h"
 
-/**
- * 
- */
+
 UCLASS()
 class SPACERTS_API APlayerPawn : public ASteeringAgentPawn
 {
@@ -72,11 +70,12 @@ public:
 	UFUNCTION()
 	void OnEngageInteraction(AActor* TargetActor);
 
+	UFUNCTION()
+	void OnLookInteraction();
+
 protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
-
-	void OnLookInteraction();
-	
+		
 	void OnLookRight(float Value);
 
 	void OnLookUp(float Value);

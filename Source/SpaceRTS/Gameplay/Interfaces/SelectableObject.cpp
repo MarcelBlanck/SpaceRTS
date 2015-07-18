@@ -17,3 +17,18 @@ void ISelectableObject::Select()
 {
 	// Base implementation neccessary, but should never be called
 }
+
+void ISelectableObject::Deselect()
+{
+	// Base implementation neccessary, but should never be called
+}
+
+void ISelectableObject::GazeBegin()
+{
+	// Base implementation neccessary, but should never be called
+}
+
+void ISelectableObject::GazeEnd()
+{
+	// Base implementation neccessary, but should never be called
+}

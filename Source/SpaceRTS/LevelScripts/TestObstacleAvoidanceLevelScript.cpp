@@ -2,7 +2,7 @@
 
 #include "SpaceRTS.h"
 #include "TestObstacleAvoidanceLevelScript.h"
-#include "../Actors/TestSteeringSpaceship/TestSteeringSpaceship.h"
+#include "../Actors/PlayerFregatte/PlayerFregatte.h"
 
 void ATestObstacleAvoidanceLevelScript::StartWallTest(FVector Center, float Distance, int32 Rows, int32 Columns)
 {
@@ -33,7 +33,7 @@ void ATestObstacleAvoidanceLevelScript::StartCircularTest(FVector Center, float 
 
 		FRotator LookDirection = FRotationMatrix::MakeFromX(TargetPosition - StartPosition).Rotator();
 		ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(
-			World->SpawnActor(ATestSteeringSpaceship::StaticClass(),
+			World->SpawnActor(APlayerFregatte::StaticClass(),
 							  &StartPosition,
 							  &LookDirection));
 		USteeringAgentComponent* SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
@@ -76,7 +76,7 @@ void ATestObstacleAvoidanceLevelScript::StartSphereTest(FVector Center, float Ra
 			TargetPosition = Center - PositionOnSphere;
 
 			LookDirection = FRotationMatrix::MakeFromX(TargetPosition - StartPosition).Rotator();
-			SteeringAgent = Cast<ISteeringAgentInterface>(World->SpawnActor(ATestSteeringSpaceship::StaticClass(), &StartPosition, &LookDirection));
+			SteeringAgent = Cast<ISteeringAgentInterface>(World->SpawnActor(APlayerFregatte::StaticClass(), &StartPosition, &LookDirection));
 
 			SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
 			if (SteeringAgentComponent != nullptr)

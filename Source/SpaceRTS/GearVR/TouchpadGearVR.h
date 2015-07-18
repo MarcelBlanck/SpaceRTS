@@ -17,7 +17,7 @@ class SPACERTS_API UTouchpadGearVR : public UActorComponent
 
 	/* If bNotifyRelativeFingerMovement is true, the touch start to current vector is continuously reported.
 	* The vector coordinates are normalized to -1.0 and 1.0, while 0.0 is the touch start position. */
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRelativeFingerMovementDelegate, FVector2D const &, RelativeFingerMovement);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRelativeFingerMovementDelegate, FVector2D, RelativeFingerMovement);
 
 	/* Tap events */
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSingleTapGestureDelegate);

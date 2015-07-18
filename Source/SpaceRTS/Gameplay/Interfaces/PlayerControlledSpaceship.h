@@ -39,6 +39,6 @@ class IPlayerControlledSpaceship
 	virtual void ExecuteNative_InteractWithObject(const TScriptInterface<ISelectableObject>& Object);
 
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Steer To Location"), Category = "Player Controlled Spaceship")
-	void SteerToLocation(FVector &Location);
+	void SteerToLocation(FVector& Location);
 	virtual void ExecuteNative_SteerToLocation(FVector Location);
 };

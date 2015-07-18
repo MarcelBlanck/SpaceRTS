@@ -14,7 +14,7 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 	MaxInteractionDistance(20000.f),
 	RecticleDefaultDistance(3000.f),
 	RecticleAnimationRate(5.f),
-	RecticleAlpha(0.2f),
+	RecticleAlpha(0.6f),
 	RecticleColorNeutral(1.f, 1.0, 1.f, RecticleAlpha),
 	RecticleColorFriendly(0.f, 1.0, 0.f, RecticleAlpha),
 	RecticleColorAttack(1.f, 0.0, 0.f, RecticleAlpha),
@@ -30,13 +30,13 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 	ConstructorHelpers::FObjectFinder<UPaperFlipbook> RecticleFlipbook(TEXT("PaperFlipbook'/Game/GUI/Recticle/RecticleFlipbook.RecticleFlipbook'"));
 	checkf(RecticleFlipbook.Object, TEXT("Did not find PaperFlipbook'/Game/GUI/Recticle/RecticleFlipbook.RecticleFlipbook' - Maybe the asset was moved or renamed."));
 	Recticle = ObjectInitializer.CreateDefaultSubobject<UPaperFlipbookComponent>(this, TEXT("Recticle"));
-	Recticle->SetFlipbook(RecticleFlipbook.Object);
+	Recticle->AttachTo(Camera);
+    Recticle->SetFlipbook(RecticleFlipbook.Object);
 	Recticle->SetLooping(false);
 	Recticle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Recticle->SetCollisionProfileName(FName("NoCollision"));
 	Recticle->bGenerateOverlapEvents = false;
 	Recticle->SetEnableGravity(false);
-	Recticle->AttachTo(Camera);
 	Recticle->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
 	Recticle->SetRelativeLocation(FVector(RecticleDefaultDistance, 0.f, 0.f));
 	Recticle->SetRelativeScale3D(FVector(1.f));
@@ -115,11 +115,37 @@ void APlayerPawn::SetupPlayerInputComponent(UInputComponent* InputComponent)
 void APlayerPawn::OnLookInteraction()
 {
 	UE_LOG(Generic, Warning, TEXT("TADADA"));
-	if (!SelectedActor.IsValid() && CurrentLookAtActor.IsValid())
+	ISelectableObject* LookAtSelectable = Cast<ISelectableObject>(CurrentLookAtActor.Get());
+	if (LookAtSelectable != nullptr)
 	{
-		ActionIndicator->DisableActionIndication();
-		SelectedActor = CurrentLookAtActor;
-		ActionIndicator->EnableActionIndication();
+		switch (LookAtSelectable->GetType())
+		{
+		case ESelectableObjectType::Prop:
+		case ESelectableObjectType::Resource:
+		case ESelectableObjectType::EnemySpaceship:
+			LookAtSelectable->Select();
+			if (SelectedActor.IsValid())
+			{
+				ISelectableObject* SelectedSelectable = Cast<ISelectableObject>(SelectedActor.Get());
+				SelectedSelectable->Deselect();
+			}
+			SelectedActor = CurrentLookAtActor.Get();
+			break;
+		case ESelectableObjectType::UI:
+			LookAtSelectable->Select();
+			// Do not save selection, just trigger the ui element
+			break;
+		case ESelectableObjectType::PlayerControlledSpaceship:
+			ActionIndicator->DisableActionIndication();
+			if (SelectedActor.IsValid())
+			{
+				ISelectableObject* SelectedSelectable = Cast<ISelectableObject>(SelectedActor.Get());
+				SelectedSelectable->Deselect();
+			}
+			SelectedActor = CurrentLookAtActor.Get();
+			ActionIndicator->EnableActionIndication();
+			break;
+		}	
 	}
 	else if (ActionIndicator->IsActionIndicationEnabled())
 	{
@@ -154,27 +180,44 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 		false, ActorsToIgnore, EDrawDebugTrace::None, HitData, true);
 
 	AActor* LastLookAtActor = CurrentLookAtActor.Get();
+	ISelectableObject* LastLookAtSelectable = Cast<ISelectableObject>(LastLookAtActor);
+
 	CurrentLookAtActor = HitData.Actor;
+	ISelectableObject* CurrentLookAtSelectable = Cast<ISelectableObject>(CurrentLookAtActor.Get());
+
 	bool bLookAtActorHasChanged = (LastLookAtActor != CurrentLookAtActor);
 
+	// Fire Gaze Events
+	if (bLookAtActorHasChanged)
+	{
+		if (LastLookAtSelectable != nullptr)
+		{
+			LastLookAtSelectable->GazeEnd();
+		}
+		if (CurrentLookAtSelectable != nullptr)
+		{
+			CurrentLookAtSelectable->GazeBegin();
+		}
+	}
+
+	// Update Recticle Position, Color and Animation
 	if (CurrentLookAtActor.IsValid())
 	{
 		float HitDistance = (HitData.ImpactPoint - Start).Size();
-		Recticle->SetRelativeLocation(FVector(HitDistance, 0.f, 0.f));
+		Recticle->SetRelativeLocation(GetPawnViewLocation() + FVector(HitDistance, 0.f, 0.f));
 		Recticle->SetRelativeScale3D(FVector(HitDistance / RecticleDefaultDistance));
 
 		if (bLookAtActorHasChanged)
 		{
-			ISelectableObject* Object = Cast<ISelectableObject>(CurrentLookAtActor.Get());
-			if (Object != nullptr)
+			if (CurrentLookAtSelectable != nullptr)
 			{
-				switch (Object->GetType())
+				switch (CurrentLookAtSelectable->GetType())
 				{
 					case ESelectableObjectType::Prop:
 						Recticle->SetSpriteColor(RecticleColorNeutral);
 						break;
 					case ESelectableObjectType::UI:
-						Recticle->SetSpriteColor(RecticleColorNeutral);
+						Recticle->SetSpriteColor(RecticleColorInteract);
 						break;
 					case ESelectableObjectType::Resource:
 						Recticle->SetSpriteColor(RecticleColorInteract);
@@ -210,7 +253,7 @@ void APlayerPawn::ApplyOrientationFromHMD()
 	FVector DevicePosition;
 	UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(DeviceRotation, DevicePosition);
 
-	Camera->SetRelativeRotation(DeviceRotation);
+	Camera->SetRelativeRotation(FRotator(0.f, 90.f, 0.f) + DeviceRotation);
 }
 
 void APlayerPawn::OnEngageMovement(FVector TargetPosition)

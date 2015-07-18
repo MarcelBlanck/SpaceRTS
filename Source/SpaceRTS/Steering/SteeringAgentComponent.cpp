@@ -63,7 +63,7 @@ void USteeringAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType
 		if (FocusActor != nullptr)
 		{
 			Owner->SetActorRotation(FMath::RInterpTo(Owner->GetActorRotation(), 
-				FRotationMatrix::MakeFromX(FocusActor->GetActorLocation() -  Owner->GetActorLocation()).Rotator(), DeltaTime, 0.5f));
+				FRotationMatrix::MakeFromX(FocusActor->GetActorLocation() -  Owner->GetActorLocation()).Rotator(), DeltaTime, 1.f));
 		}
 	}
 }

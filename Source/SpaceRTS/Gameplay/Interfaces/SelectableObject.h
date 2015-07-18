@@ -11,7 +11,7 @@ enum class ESelectableObjectType : uint8
 	UI							UMETA(DisplayName = "UI"),
 	Resource					UMETA(DisplayName = "Resource"),
 	EnemySpaceship				UMETA(DisplayName = "EnemySpaceship"),
-	PlayerControlledSpaceship	UMETA(DisplayName = "Rain")
+	PlayerControlledSpaceship	UMETA(DisplayName = "PlayerControlledSpaceship")
 };
 
 UINTERFACE(BlueprintType)
@@ -27,4 +27,10 @@ class ISelectableObject
 	virtual ESelectableObjectType GetType();
 
 	virtual void Select();
+
+	virtual void Deselect();
+
+	virtual void GazeBegin();
+	
+	virtual void GazeEnd();
 };
