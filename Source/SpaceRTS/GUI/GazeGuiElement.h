@@ -20,7 +20,7 @@ UCLASS()
 class SPACERTS_API AGazeGuiElement : public AActor, public ISelectableObject
 {
 	GENERATED_BODY()
-	
+
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSelect);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDeselect);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGazeBegin);
@@ -29,9 +29,12 @@ class SPACERTS_API AGazeGuiElement : public AActor, public ISelectableObject
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTriggered);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSwitched, bool, Active);
 
-public:	
+public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Gaze Gui")
 	EGazeGuiElementType GazeGuiElementType;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Gaze Gui")
+	float GazeAnimationDurationS;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Gaze Gui")
 	float HighlightAnimationDurationS;
@@ -41,9 +44,6 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Gaze Gui")
 	TArray<UTextRenderComponent*> TextRenderComponents;
-
-	UFUNCTION(BlueprintCallable, Category = "Gaze Gui")
-	void TweenScale(float NewTargetScale, float DurationS);
 
 	AGazeGuiElement(const FObjectInitializer& ObjectInitializer);
 
@@ -92,4 +92,11 @@ private:
 	float HighlightChangeDurationS;
 
 	bool SwitchActive;
+
+	void StartScaleAnimation(float NewTargetScale);
+	void AnimateScale();
+
+	void StartTriggerAnimation();
+	void StartSwitchAnimation(bool NewActive);
+	void AnimateColor();
 };
