@@ -67,8 +67,6 @@ void APlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
-	EnableInput(GetWorld()->GetFirstPlayerController());
-
 	OnEngageMovmentDelegate.BindUFunction(this, TEXT("OnEngageMovement"));
 	ActionIndicator->GetOnEngageMovementDelegate().Add(OnEngageMovmentDelegate);
 	//ActionIndicator->GetOnEngageAttackDelegate().AddDynamic(this, &APlayerPawn::OnEngageAttack);
@@ -76,6 +74,14 @@ void APlayerPawn::BeginPlay()
 
 	OnGearVRTouchpadTapDelegate.BindUFunction(this, TEXT("OnLookInteraction"));
 	TouchpadGearVR->OnSingleTap.Add(OnGearVRTouchpadTapDelegate);
+}
+
+
+void APlayerPawn::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	EnableInput(Cast<APlayerController>(NewController));
 }
 
 void APlayerPawn::Tick(float DeltaSeconds)
@@ -114,7 +120,6 @@ void APlayerPawn::SetupPlayerInputComponent(UInputComponent* InputComponent)
 
 void APlayerPawn::OnLookInteraction()
 {
-	UE_LOG(Generic, Warning, TEXT("TADADA"));
 	ISelectableObject* LookAtSelectable = Cast<ISelectableObject>(CurrentLookAtActor.Get());
 	if (LookAtSelectable != nullptr)
 	{

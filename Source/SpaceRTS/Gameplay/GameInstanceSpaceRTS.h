@@ -22,9 +22,18 @@ class SPACERTS_API UGameInstanceSpaceRTS : public UGameInstance
 public:
 	UGameInstanceSpaceRTS(const FObjectInitializer& ObjectInitializer);
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SolusHUDCrosshair)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PlayerOptions)
 	bool ShowPlayerPawnBody;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = SolusHUDCrosshair)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PlayerOptions)
 	EPlayerBodyPosition PlayerBodyPosition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PlayerOptions)
+	float InterpupillaryDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PlayerOptions)
+	FLinearColor GuiColor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PlayerOptions)
+	FLinearColor GuiHighlightColor;
 };
