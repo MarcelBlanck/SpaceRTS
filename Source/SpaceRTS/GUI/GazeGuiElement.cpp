@@ -12,6 +12,11 @@ AGazeGuiElement::AGazeGuiElement(const FObjectInitializer& ObjectInitializer) :
 	PrimaryActorTick.bCanEverTick = 1;
 }
 
+void AGazeGuiElement::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+}
+
 void AGazeGuiElement::BeginPlay()
 {
 	Super::BeginPlay();
@@ -24,7 +29,7 @@ void AGazeGuiElement::BeginPlay()
 	SetActorRotation(FRotationMatrix::MakeFromX(PlayerPawnLocation - GetActorLocation()).Rotator());
 
 	FLinearColor GuiColor = Cast<UGameInstanceSpaceRTS>(GetGameInstance())->GuiColor;
-	
+
 	TArray<UActorComponent*> TmpPaperSpriteComponents = GetComponentsByClass(UPaperSpriteComponent::StaticClass());
 	for (UActorComponent* Component : TmpPaperSpriteComponents)
 	{
@@ -35,7 +40,7 @@ void AGazeGuiElement::BeginPlay()
 			PaperSpriteComponents.AddUnique(PaperSpriteComponent);
 		}
 	}
-	
+
 	TArray<UActorComponent*> TmpTextRenderComponents = GetComponentsByClass(UTextRenderComponent::StaticClass());
 	for (UActorComponent* Component : TmpTextRenderComponents)
 	{
@@ -57,6 +62,24 @@ void AGazeGuiElement::Tick(float DeltaTime)
 		AnimateScale();
 		AnimateColor();
 	}
+	else
+	{
+		FLinearColor GuiColor = Cast<UGameInstanceSpaceRTS>(GetGameInstance())->GuiColor;
+
+		for (UPaperSpriteComponent* PaperSpriteComponent : PaperSpriteComponents)
+		{
+			PaperSpriteComponent->SetSpriteColor(GuiColor);
+		}
+		for (UTextRenderComponent* TextRenderComponent : TextRenderComponents)
+		{
+			TextRenderComponent->SetTextRenderColor(GuiColor);
+		}
+	}
+}
+
+bool AGazeGuiElement::IsSwitchActive()
+{
+	return SwitchActive;
 }
 
 
@@ -77,7 +100,12 @@ void AGazeGuiElement::Select()
 		SwitchActive = false;
 		StartTriggerAnimation();
 	}	
-	else if (GazeGuiElementType == EGazeGuiElementType::Switch)
+	else if (GazeGuiElementType == EGazeGuiElementType::Switch && !SwitchActive)
+	{
+		SwitchActive = true;
+		StartSwitchAnimation(SwitchActive);
+	}
+	else if (GazeGuiElementType == EGazeGuiElementType::ToggleSwitch)
 	{
 		SwitchActive = !SwitchActive;
 		StartSwitchAnimation(SwitchActive);
@@ -91,7 +119,7 @@ void AGazeGuiElement::Deselect()
 		OnDeselect.Broadcast();
 	}
 
-	if (GazeGuiElementType == EGazeGuiElementType::Switch)
+	if (GazeGuiElementType == EGazeGuiElementType::Switch && SwitchActive)
 	{
 		SwitchActive = false;
 		StartSwitchAnimation(SwitchActive);
@@ -120,6 +148,9 @@ void AGazeGuiElement::GazeEnd()
 
 void AGazeGuiElement::StartScaleAnimation(float NewTargetScale)
 {
+	if (GetWorld() == nullptr)
+		return;
+
 	TargetScale = NewTargetScale;
 	ScaleChangeFinishedTimeS = GetWorld()->GetTimeSeconds() + GazeAnimationDurationS;
 	ScaleChangeDurationS = GazeAnimationDurationS;
@@ -141,7 +172,7 @@ void AGazeGuiElement::StartTriggerAnimation()
 	TargetHighlight = 1.f;
 	HighlightChangeFinishedTimeS = GetWorld()->GetTimeSeconds() + HighlightAnimationDurationS;
 	HighlightChangeDurationS = HighlightAnimationDurationS;
-	OnTriggered.Broadcast();
+	OnTriggered.Broadcast(this);
 }
 
 void AGazeGuiElement::StartSwitchAnimation(bool NewActive)
@@ -150,11 +181,14 @@ void AGazeGuiElement::StartSwitchAnimation(bool NewActive)
 	TargetHighlight = 1.f;
 	HighlightChangeFinishedTimeS = GetWorld()->GetTimeSeconds() + HighlightAnimationDurationS;
 	HighlightChangeDurationS = HighlightAnimationDurationS;
-	OnSwitched.Broadcast(NewActive);
+	OnSwitched.Broadcast(this, NewActive);
 }
 
 void AGazeGuiElement::AnimateColor()
 {
+	if (GetWorld() == nullptr)
+		return;
+
 	if (!FMath::IsNearlyEqual(CurrentHighlight, TargetHighlight))
 	{
 		float ColorBlendProgress = 0.f;

@@ -43,7 +43,7 @@ APlayerFregatte::APlayerFregatte(const FObjectInitializer& ObjectInitializer) :
 
 ESelectableObjectType APlayerFregatte::GetType()
 {
-	return (FMath::RandBool()) ? ESelectableObjectType::PlayerControlledSpaceship : ESelectableObjectType::EnemySpaceship;
+	return ESelectableObjectType::PlayerControlledSpaceship;
 }
 
 void APlayerFregatte::Select()

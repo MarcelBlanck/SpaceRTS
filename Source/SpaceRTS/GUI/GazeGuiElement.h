@@ -13,7 +13,8 @@ enum class EGazeGuiElementType : uint8
 {
 	Indicator              UMETA(DisplayName = "Indicator"),
 	Trigger                UMETA(DisplayName = "Trigger"),
-	Switch                 UMETA(DisplayName = "Switch")
+	Switch                 UMETA(DisplayName = "Switch"),
+	ToggleSwitch           UMETA(DisplayName = "ToggleSwitch")
 };
 
 UCLASS()
@@ -26,8 +27,8 @@ class SPACERTS_API AGazeGuiElement : public AActor, public ISelectableObject
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGazeBegin);
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGazeEnd);
 
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTriggered);
-	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSwitched, bool, Active);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTriggered, AGazeGuiElement*, GazeGuiElement);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSwitched, AGazeGuiElement*, GazeGuiElement, bool, Active);
 
 public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Gaze Gui")
@@ -47,9 +48,13 @@ public:
 
 	AGazeGuiElement(const FObjectInitializer& ObjectInitializer);
 
-	void BeginPlay() override;
+	virtual void OnConstruction(const FTransform& Transform) override;
+
+	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaTime) override;
+
+	bool IsSwitchActive();
 
 	virtual ESelectableObjectType GetType() override;
 

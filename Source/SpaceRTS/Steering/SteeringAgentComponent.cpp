@@ -34,8 +34,6 @@ void USteeringAgentComponent::BeginPlay()
 	Super::BeginPlay();
 
 	AddTickPrerequisiteActor(GetWorld()->GetLevelScriptActor());
-
-	TargetPosition = Owner->GetActorLocation();
 }
 
 void USteeringAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -47,11 +45,13 @@ void USteeringAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType
 		Velocity = NewVelocity.GetClampedToMaxSize(MaxVelocity);
 		if (!Velocity.IsNearlyZero())
 		{
+			Owner->SetActorLocation(Owner->GetActorLocation() + Velocity * DeltaTime);
+			/*
 			float DotToTargetPosition = FVector::DotProduct((TargetPosition - Owner->GetActorLocation()).GetSafeNormal(), Owner->GetActorForwardVector());
 			if (DotToTargetPosition > 0.75)
 			{
 				Owner->SetActorLocation(Owner->GetActorLocation() + Velocity * DeltaTime);
-			}
+			}*/
 
 			if (FocusActor == nullptr)
 			{

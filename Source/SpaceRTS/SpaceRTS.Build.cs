@@ -6,7 +6,7 @@ public class SpaceRTS : ModuleRules
 {
     public SpaceRTS(TargetInfo Target)
 	{
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Paper2D" });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "Paper2D", "HeadMountedDisplay"});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

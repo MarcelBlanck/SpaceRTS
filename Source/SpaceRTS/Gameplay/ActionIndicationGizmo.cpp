@@ -241,7 +241,7 @@ void UActionIndicationGizmo::EnterSuccessiveState()
 		break;
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("CurrentGizmoStage %d"), (int32)CurrentGizmoStage));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("CurrentGizmoStage %d"), (int32)CurrentGizmoStage));
 }
 
 bool UActionIndicationGizmo::TryEnterPreviousState()

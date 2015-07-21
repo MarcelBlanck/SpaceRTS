@@ -52,7 +52,7 @@ public:
 	FLinearColor RecticleColorInteract;
 
 	APlayerPawn(const FObjectInitializer& ObjectInitializer);
-
+	
 	virtual FVector GetPawnViewLocation() const override;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
@@ -92,6 +92,5 @@ private:
 
 	TScriptDelegate<FWeakObjectPtr> OnGearVRTouchpadTapDelegate;
 
-	void ApplyOrientationFromHMD();
 	void UpdateLookAtActorAndRecticle();
 };
