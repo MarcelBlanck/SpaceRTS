@@ -19,6 +19,9 @@ public:
 	UCameraComponent* Camera;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	USceneComponent* RecticleRoot;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 	UPaperFlipbookComponent* Recticle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")

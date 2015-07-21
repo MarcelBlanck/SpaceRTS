@@ -25,22 +25,24 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 
 	Camera = ObjectInitializer.CreateDefaultSubobject<UCameraComponent>(this, TEXT("PlayerCamera"));
 	Camera->AttachTo(RootComponent);
-	//Camera->bUsePawnControlRotation = true;
-	//Camera->SetRelativeScale3D(FVector(0.2f));
+	Camera->bUsePawnControlRotation = false;
+	Camera->FieldOfView = 90.f;
+
+	RecticleRoot = ObjectInitializer.CreateDefaultSubobject<USceneComponent>(this, TEXT("RecticleRoot"));
+	RecticleRoot->SetRelativeLocation(FVector(RecticleDefaultDistance, 0.f, 0.f));
+	RecticleRoot->AttachTo(RootComponent);
 
 	ConstructorHelpers::FObjectFinder<UPaperFlipbook> RecticleFlipbook(TEXT("PaperFlipbook'/Game/GUI/Recticle/RecticleFlipbook.RecticleFlipbook'"));
 	checkf(RecticleFlipbook.Object, TEXT("Did not find PaperFlipbook'/Game/GUI/Recticle/RecticleFlipbook.RecticleFlipbook' - Maybe the asset was moved or renamed."));
 	Recticle = ObjectInitializer.CreateDefaultSubobject<UPaperFlipbookComponent>(this, TEXT("Recticle"));
-	Recticle->AttachTo(RootComponent);
+	Recticle->AttachTo(RecticleRoot);
     Recticle->SetFlipbook(RecticleFlipbook.Object);
 	Recticle->SetLooping(false);
 	Recticle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Recticle->SetCollisionProfileName(FName("NoCollision"));
 	Recticle->bGenerateOverlapEvents = false;
 	Recticle->SetEnableGravity(false);
-	//Recticle->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
-	Recticle->SetRelativeLocation(FVector(RecticleDefaultDistance, 0.f, 0.f));
-	Recticle->SetRelativeScale3D(FVector(1.f));
+	Recticle->SetRelativeRotation(FRotator(0.f, 90.f, 0.f));
 	Recticle->SetPlaybackPosition(0.f, false);
 	Recticle->SetSpriteColor(RecticleColorNeutral);
 	Recticle->Stop();
@@ -51,7 +53,12 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 
 	SteeringAgentComponent->DisableSteering();
 }
-FVector APlayerPawn::GetPawnViewLocation() const{	return GetActorLocation() + CameraLocation;}
+
+FVector APlayerPawn::GetPawnViewLocation() const
+{
+	return GetActorLocation() + CameraLocation;
+}
+
 void APlayerPawn::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
@@ -63,12 +70,7 @@ void APlayerPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled())
-	{	
-		Camera->bUsePawnControlRotation = true
-			;
-	}
-	else
+	if (UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled())
 	{
 		UHeadMountedDisplayFunctionLibrary::EnableHMD(true);
 		UHeadMountedDisplayFunctionLibrary::EnableLowPersistenceMode(true);
@@ -186,7 +188,7 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 	FVector DevicePosition;
 	UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(DeviceRotation, DevicePosition);
 	
-	const FVector Start = Camera->GetComponentLocation();
+	const FVector Start = GetPawnViewLocation();
 	const FVector End = Start + DeviceRotation.Vector() * 100000;
 
 	TArray<AActor*> ActorsToIgnore;
@@ -223,8 +225,8 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 		FVector HitVector = (HitData.ImpactPoint - Start);
 		float HitDistance = HitVector.Size();
 		
-		Recticle->SetRelativeLocation(GetPawnViewLocation() + DeviceRotation.Vector() * HitDistance);
-		Recticle->SetRelativeScale3D(FVector(HitDistance / RecticleDefaultDistance));
+		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotation.Vector() * HitDistance);
+		RecticleRoot->SetRelativeScale3D(FVector(HitDistance / RecticleDefaultDistance));
 
 		if (bLookAtActorHasChanged)
 		{
@@ -258,14 +260,14 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 		if (bLookAtActorHasChanged)
 		{
 			Recticle->SetSpriteColor(RecticleColorNeutral);
-			Recticle->SetRelativeScale3D(FVector(1.f));
+			RecticleRoot->SetRelativeScale3D(FVector(1.f));
 			Recticle->SetPlaybackPosition(0.f, false);
 			Recticle->Stop();
 		}
-		Recticle->SetRelativeLocation(GetPawnViewLocation() + DeviceRotation.Vector() * RecticleDefaultDistance);
+		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotation.Vector() * RecticleDefaultDistance);
 	}
-
-	Recticle->SetRelativeRotation(DeviceRotation + FRotator(0.f, 90.f, 0.f)); // TODO USe look at rotation
+	
+	RecticleRoot->SetWorldRotation(FRotationMatrix::MakeFromX(GetPawnViewLocation() - RecticleRoot->GetComponentLocation()).Rotator());
 }
 
 void APlayerPawn::OnEngageMovement(FVector TargetPosition)
