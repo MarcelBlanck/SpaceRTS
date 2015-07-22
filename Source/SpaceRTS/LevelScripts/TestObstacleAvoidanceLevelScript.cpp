@@ -4,9 +4,62 @@
 #include "TestObstacleAvoidanceLevelScript.h"
 #include "../Actors/PlayerFregatte/PlayerFregatte.h"
 
-void ATestObstacleAvoidanceLevelScript::StartWallTest(FVector Center, float Distance, int32 Rows, int32 Columns)
+void ATestObstacleAvoidanceLevelScript::StartWallTest(FVector Center, float Distance, int32 Rows, float RowDistance, int32 Columns, float ColumnDistance)
 {
+	UWorld* World = GetWorld();
+	check(World);
 
+	DestroyAllSpawnedActors();
+	
+	FVector LeftPosition;
+	FVector RightPosition;
+
+	float HalfWallWidth = Columns * ColumnDistance / 2.f;
+	float HalsWallHeight = Rows * RowDistance / 2.f;
+
+	for (int32 Row = 0; Row < Rows; ++Row)
+	{
+		for (int32 Column = 0; Column < Columns; ++Column)
+		{
+			LeftPosition.X = Center.X + Distance / 2;
+			LeftPosition.Y = Center.Y - HalfWallWidth + Row * RowDistance;
+			LeftPosition.Z = Center.Z - HalsWallHeight + Column * ColumnDistance;
+
+			RightPosition.X = Center.X - Distance / 2;
+			RightPosition.Y = Center.Y + HalfWallWidth - Row * RowDistance;
+			RightPosition.Z = Center.Z + HalsWallHeight - Column * ColumnDistance;
+
+			FRotator LookDirection = FRotationMatrix::MakeFromX(RightPosition - LeftPosition).Rotator();
+			ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(
+				World->SpawnActor(APlayerFregatte::StaticClass(),
+				&LeftPosition,
+				&LookDirection));
+
+			SpawnedActors.Add(Cast<AActor>(SteeringAgent));
+
+			USteeringAgentComponent* SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
+			if (SteeringAgentComponent != nullptr)
+			{
+				SteeringAgentComponent->SetTargetPosition(RightPosition);
+			}
+
+
+
+			LookDirection = FRotationMatrix::MakeFromX(LeftPosition - RightPosition).Rotator();
+			SteeringAgent = Cast<ISteeringAgentInterface>(
+				World->SpawnActor(APlayerFregatte::StaticClass(),
+				&RightPosition,
+				&LookDirection));
+
+			SpawnedActors.Add(Cast<AActor>(SteeringAgent));
+
+			SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
+			if (SteeringAgentComponent != nullptr)
+			{
+				SteeringAgentComponent->SetTargetPosition(LeftPosition);
+			}
+		}
+	}
 }
 
 void ATestObstacleAvoidanceLevelScript::StartCircularTest(FVector Center, float Radius, int32 Segments)
@@ -14,6 +67,11 @@ void ATestObstacleAvoidanceLevelScript::StartCircularTest(FVector Center, float 
 	UWorld* World = GetWorld();
 	check(World);
 	
+	DestroyAllSpawnedActors();
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.OverrideLevel = GetLevel();
+
 	float RadDelta = 2 * PI / Segments;
 	float CircleX;
 	float CircleY;
@@ -35,7 +93,11 @@ void ATestObstacleAvoidanceLevelScript::StartCircularTest(FVector Center, float 
 		ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(
 			World->SpawnActor(APlayerFregatte::StaticClass(),
 							  &StartPosition,
-							  &LookDirection));
+							  &LookDirection, 
+							  SpawnParams));
+		
+		SpawnedActors.Add(Cast<AActor>(SteeringAgent));
+
 		USteeringAgentComponent* SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
 		if (SteeringAgentComponent != nullptr)
 		{
@@ -48,6 +110,8 @@ void ATestObstacleAvoidanceLevelScript::StartSphereTest(FVector Center, float Ra
 {
 	UWorld* World = GetWorld();
 	check(World);
+
+	DestroyAllSpawnedActors();
 
 	FVector PositionOnSphere;
 	FVector StartPosition(Center);
@@ -78,6 +142,8 @@ void ATestObstacleAvoidanceLevelScript::StartSphereTest(FVector Center, float Ra
 			LookDirection = FRotationMatrix::MakeFromX(TargetPosition - StartPosition).Rotator();
 			SteeringAgent = Cast<ISteeringAgentInterface>(World->SpawnActor(APlayerFregatte::StaticClass(), &StartPosition, &LookDirection));
 
+			SpawnedActors.Add(Cast<AActor>(SteeringAgent));
+
 			SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
 			if (SteeringAgentComponent != nullptr)
 			{
@@ -86,3 +152,52 @@ void ATestObstacleAvoidanceLevelScript::StartSphereTest(FVector Center, float Ra
 		}
 	}
 }
+
+void ATestObstacleAvoidanceLevelScript::DestroyAllSpawnedActors()
+{
+	for (AActor* SpawnedActor : SpawnedActors)
+	{
+		if (SpawnedActor == nullptr) continue;
+		SpawnedActor->Destroy();
+	}
+	SpawnedActors.RemoveAll([](const AActor* Ptr){ return true; });
+}
+
+/*
+AActor* ATestObstacleAvoidanceLevelScript::SpawnActorIntoLevel(UObject* WorldContextObject, TSubclassOf<AActor> ActorClass, FName Level, FVector Location, FRotator Rotation, bool SpawnEvenIfColliding)
+{
+	if (!ActorClass) return NULL;
+
+	UWorld* const World = GEngine->GetWorldFromContextObject(WorldContextObject);
+	check(World);
+
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.bNoCollisionFail = SpawnEvenIfColliding;
+	SpawnParameters.bDeferConstruction = false;
+
+
+	ULevel* FoundLevel = NULL;
+
+	for (const ULevelStreaming* Level : World->StreamingLevels)
+	{
+		if (!Level) continue;
+
+		ULevel* LevelPtr = Level->GetLoadedLevel();
+		if (!LevelPtr) continue;
+
+		if (Level->GetWorldAssetPackageFName() == Level)
+		{
+			FoundLevel = LevelPtr;
+			break;
+		}
+	}
+
+	if (FoundLevel)
+	{
+		SpawnParameters.OverrideLevel = FoundLevel;
+	}
+
+	return World->SpawnActor(ActorClass, &Location, &Rotation, SpawnParameters);
+}
+*/
