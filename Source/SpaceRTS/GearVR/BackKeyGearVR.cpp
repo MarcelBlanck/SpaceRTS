@@ -1,44 +1,46 @@
 #include "SpaceRTS.h"
 #include "BackKeyGearVR.h"
 
-UBackKeyGearVR::UBackKeyGearVR()
+UBackKeyGearVR::UBackKeyGearVR() :
+	Super(),
+	MaxClickTime(0.25f)
 {
 	bWantsBeginPlay = true;
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.bTickEvenWhenPaused = false;
+	PrimaryComponentTick.bAllowTickOnDedicatedServer = false;
+	PrimaryComponentTick.bCanEverTick = false;
 }
 
 void UBackKeyGearVR::BeginPlay()
 {
 	Super::BeginPlay();
 
-	APlayerController *PlayerController = UGameplayStatics::GetPlayerController(this, 0);
-	checkf(PlayerController != nullptr, TEXT("The Universal Menu Gear VR Component can not work without an existing PlayerController for player 0."));
+	APawn* Owner = Cast<APawn>(GetOwner());
+	checkf(Owner != nullptr, TEXT("The Gesture Recognizer Gear VR Component can only be used on entitys inheriting from APawn."));
 
-	AActor* Owner = GetOwner();
-	Owner->EnableInput(PlayerController);
+	Owner->EnableInput(GetWorld()->GetFirstPlayerController());
 
 #if PLATFORM_ANDROID == 1
-	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Pressed, this, &UBackKeyGearVR::BackPressed).bConsumeInput = false;
-	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Released, this, &UBackKeyGearVR::BackReleased).bConsumeInput = false;
+	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Pressed, this, &UBackKeyGearVR::BackPressed).bConsumeInput = false;
+	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Released, this, &UBackKeyGearVR::BackReleased).bConsumeInput = false;
 #else
 	// Allow debugging with Backspace key
-	UE_LOG(Generic, Warning, TEXT("UBackKeyGearVR registering debug back key E"));
-	Owner->InputComponent->BindKey(EKeys::E, EInputEvent::IE_Pressed, this, &UBackKeyGearVR::BackPressed).bConsumeInput = false;
-	Owner->InputComponent->BindKey(EKeys::E, EInputEvent::IE_Released, this, &UBackKeyGearVR::BackReleased).bConsumeInput = false;
+	UE_LOG(Generic, Warning, TEXT("UBackKeyGearVR registering debug back key BackSpace"));
+	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Pressed, this, &UBackKeyGearVR::BackPressed).bConsumeInput = false;
+	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Released, this, &UBackKeyGearVR::BackReleased).bConsumeInput = false;
 #endif
-
-	SetComponentTickEnabled(false);
 }
 
 void UBackKeyGearVR::BackPressed()
 {
-	BackKeyPressTime = GEngine->GetWorldFromContextObject(this)->GetTimeSeconds();
+	BackKeyPressTime = GetWorld()->GetTimeSeconds();
 }
 
 
 void UBackKeyGearVR::BackReleased()
 {
-	const float BackKeyReleaseTime = GEngine->GetWorldFromContextObject(this)->GetTimeSeconds();
+	const float BackKeyReleaseTime = GetWorld()->GetTimeSeconds();
 	if (BackKeyReleaseTime - BackKeyPressTime < MaxClickTime)
 	{
 		OnBackClicked.Broadcast();

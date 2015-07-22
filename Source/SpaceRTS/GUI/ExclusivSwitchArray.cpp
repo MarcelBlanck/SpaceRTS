@@ -16,8 +16,11 @@ void AExclusivSwitchArray::BeginPlay()
 	OnSwitchedDelegate.BindUFunction(this, TEXT("OnSwitched"));
 	for (AGazeGuiElement* Switch : Switches)
 	{
-		Switch->GazeGuiElementType = EGazeGuiElementType::Switch;
-		Switch->OnSwitched.Add(OnSwitchedDelegate);
+		if (Switch != nullptr)
+		{
+			Switch->GazeGuiElementType = EGazeGuiElementType::Switch;
+			Switch->OnSwitched.AddUnique(OnSwitchedDelegate);
+		}
 	}
 }
 

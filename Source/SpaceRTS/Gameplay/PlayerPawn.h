@@ -6,6 +6,7 @@
 #include "PaperFlipbookComponent.h"
 #include "ActionIndicationGizmo.h"
 #include "../GearVR/TouchpadGearVR.h"
+#include "../GearVR/BackKeyGearVR.h"
 #include "PlayerPawn.generated.h"
 
 
@@ -13,6 +14,8 @@ UCLASS()
 class SPACERTS_API APlayerPawn : public ASteeringAgentPawn
 {
 	GENERATED_BODY()
+
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FBackDelegate);
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
@@ -29,6 +32,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 	UTouchpadGearVR* TouchpadGearVR;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	UBackKeyGearVR* BackKeyGearVR;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	float MaxInteractionDistance;
@@ -78,6 +84,12 @@ public:
 	UFUNCTION()
 	void OnLookInteraction();
 
+	UFUNCTION()
+	void OnBackKey();
+
+	UPROPERTY()
+	FBackDelegate OnBack;
+
 protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 		
@@ -94,6 +106,7 @@ private:
 	TScriptDelegate<FWeakObjectPtr> OnEngageMovmentDelegate;
 
 	TScriptDelegate<FWeakObjectPtr> OnGearVRTouchpadTapDelegate;
+	TScriptDelegate<FWeakObjectPtr> OnGearVRBackKeyDelegate;
 
 	void UpdateLookAtActorAndRecticle();
 };

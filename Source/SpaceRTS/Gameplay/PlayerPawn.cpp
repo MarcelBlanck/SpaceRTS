@@ -51,6 +51,9 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 
 	TouchpadGearVR = ObjectInitializer.CreateDefaultSubobject<UTouchpadGearVR>(this, TEXT("TouchpadGearVR"));
 
+	BackKeyGearVR = ObjectInitializer.CreateDefaultSubobject<UBackKeyGearVR>(this, TEXT("BackKeyGearVR"));
+	BackKeyGearVR->RegisterComponent();
+
 	SteeringAgentComponent->DisableSteering();
 }
 
@@ -84,6 +87,13 @@ void APlayerPawn::BeginPlay()
 
 	OnGearVRTouchpadTapDelegate.BindUFunction(this, TEXT("OnLookInteraction"));
 	TouchpadGearVR->OnSingleTap.Add(OnGearVRTouchpadTapDelegate);
+
+	OnGearVRBackKeyDelegate.BindUFunction(this, TEXT("OnBackKey"));
+	BackKeyGearVR->OnBackClicked.Add(OnGearVRBackKeyDelegate);
+
+	bBlockInput = false;
+	AutoReceiveInput = EAutoReceiveInput::Player0;
+	InputPriority = 1;
 }
 
 
@@ -100,11 +110,6 @@ void APlayerPawn::Tick(float DeltaSeconds)
 	
 	//TickFpsCounter();
 	
-	if (UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled())
-	{
-		//ApplyOrientationFromHMD();
-	}
-
 	UpdateLookAtActorAndRecticle();
 
 	if (ActionIndicator->IsActionIndicationEnabled())
@@ -126,6 +131,11 @@ void APlayerPawn::SetupPlayerInputComponent(UInputComponent* InputComponent)
 	InputComponent->BindAction("LookInteraction", EInputEvent::IE_Pressed, this, &APlayerPawn::OnLookInteraction);
 	InputComponent->BindAxis("LookRight", this, &APlayerPawn::OnLookRight);
 	InputComponent->BindAxis("LookUp", this, &APlayerPawn::OnLookUp);
+}
+
+void APlayerPawn::OnBackKey()
+{
+
 }
 
 void APlayerPawn::OnLookInteraction()
@@ -184,12 +194,21 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 {
 	FCollisionQueryParams TraceParams(FName(TEXT("CurrentLookAtActorTrace")), false, this);
 
-	FRotator DeviceRotation;
-	FVector DevicePosition;
-	UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(DeviceRotation, DevicePosition);
-	
+	FVector DeviceRotationVector;
+	if (UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled())
+	{
+		FRotator DeviceRotation;
+		FVector DevicePosition;
+		UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(DeviceRotation, DevicePosition);
+		DeviceRotationVector = DeviceRotation.Vector();
+	}
+	else
+	{
+		DeviceRotationVector = Camera->GetForwardVector();
+	}
+
 	const FVector Start = GetPawnViewLocation();
-	const FVector End = Start + DeviceRotation.Vector() * 100000;
+	const FVector End = Start + DeviceRotationVector * 100000;
 
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(this);
@@ -225,7 +244,7 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 		FVector HitVector = (HitData.ImpactPoint - Start);
 		float HitDistance = HitVector.Size();
 		
-		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotation.Vector() * HitDistance);
+		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotationVector * HitDistance);
 		RecticleRoot->SetRelativeScale3D(FVector(HitDistance / RecticleDefaultDistance));
 
 		if (bLookAtActorHasChanged)
@@ -264,7 +283,7 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 			Recticle->SetPlaybackPosition(0.f, false);
 			Recticle->Stop();
 		}
-		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotation.Vector() * RecticleDefaultDistance);
+		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotationVector * RecticleDefaultDistance);
 	}
 	
 	RecticleRoot->SetWorldRotation(FRotationMatrix::MakeFromX(GetPawnViewLocation() - RecticleRoot->GetComponentLocation()).Rotator());

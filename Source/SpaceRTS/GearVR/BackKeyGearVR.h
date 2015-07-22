@@ -21,8 +21,10 @@ public:
 
 	void BeginPlay() override;
 
+	UFUNCTION()
 	virtual void BackPressed();
 
+	UFUNCTION()
 	virtual void BackReleased();
 
 	/* Delegate to execute when the Gear VR back button is pressed and released before MaxClickTime is over */
