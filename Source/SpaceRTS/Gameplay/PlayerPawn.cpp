@@ -59,14 +59,12 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 
 FVector APlayerPawn::GetPawnViewLocation() const
 {
-	return GetActorLocation() + CameraLocation;
+	return (GetActorLocation() * 2) - Camera->GetComponentLocation();
 }
 
 void APlayerPawn::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-
-	CameraLocation = Camera->GetComponentLocation();
 }
 
 void APlayerPawn::BeginPlay()
@@ -204,7 +202,7 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 	}
 	else
 	{
-		DeviceRotationVector = Camera->GetForwardVector();
+		DeviceRotationVector = Camera->GetComponentRotation().Vector();
 	}
 
 	const FVector Start = GetPawnViewLocation();

@@ -33,7 +33,7 @@ APlayerFregatte::APlayerFregatte(const FObjectInitializer& ObjectInitializer) :
 	Mesh->bGenerateOverlapEvents = false;
 	Mesh->SetEnableGravity(false);
 	Mesh->BodyInstance.SetInstanceNotifyRBCollision(false);
-	Mesh->BodyInstance.SetCollisionProfileName("NoCollision");
+	Mesh->BodyInstance.SetCollisionProfileName("Selectable");
 	Mesh->SetRelativeRotation(FRotator(0.f, 280.f, 0.f));
 	Mesh->AttachTo(RootComponent);
 
