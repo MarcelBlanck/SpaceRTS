@@ -6,6 +6,7 @@
 
 UGameInstanceSpaceRTS::UGameInstanceSpaceRTS(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer),
+	GameJustStarted(true),
 	ShowPlayerPawnBody(true),
 	PlayerBodyPosition(EPlayerBodyPosition::NormalChair),
 	InterpupillaryDistance(64.4f),

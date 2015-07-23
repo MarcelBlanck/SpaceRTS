@@ -23,6 +23,9 @@ public:
 	UGameInstanceSpaceRTS(const FObjectInitializer& ObjectInitializer);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PlayerOptions)
+	bool GameJustStarted;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PlayerOptions)
 	bool ShowPlayerPawnBody;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PlayerOptions)
