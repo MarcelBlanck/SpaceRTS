@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<BuildReceipt xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Properties>
+    <Property Name="TargetName" Value="SpaceRTS" />
+    <Property Name="Platform" Value="Android" />
+    <Property Name="Configuration" Value="Development" />
+    <Property Name="Precompile" Value="False" />
+  </Properties>
+  <BuildProducts>
+    <BuildProduct Path="$(ProjectDir)\Binaries\Android\SpaceRTS-armv7-es2.so" Type="Executable" />
+    <BuildProduct Path="$(ProjectDir)\Binaries\Android\SpaceRTS-armv7-es2.apk" Type="Executable" />
+    <BuildProduct Path="$(EngineDir)\Plugins\2D\Paper2D\Binaries\Android\SpaceRTS-Paper2D-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Experimental\CharacterAI\Binaries\Android\SpaceRTS-CharacterAI-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Media\AndroidMedia\Binaries\Android\SpaceRTS-AndroidMedia-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Messaging\UdpMessaging\Binaries\Android\SpaceRTS-UdpMessaging-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Runtime\AndroidDeviceProfileSelector\Binaries\Android\SpaceRTS-AndroidDeviceProfileSelector-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Runtime\AndroidMoviePlayer\Binaries\Android\SpaceRTS-AndroidMoviePlayer-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Runtime\CableComponent\Binaries\Android\SpaceRTS-CableComponent-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Runtime\CustomMeshComponent\Binaries\Android\SpaceRTS-CustomMeshComponent-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Runtime\ExampleDeviceProfileSelector\Binaries\Android\SpaceRTS-ExampleDeviceProfileSelector-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Runtime\GearVR\Binaries\Android\SpaceRTS-GearVR-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Runtime\ProceduralMeshComponent\Binaries\Android\SpaceRTS-ProceduralMeshComponent-armv7-es2.a" Type="StaticLibrary" />
+    <BuildProduct Path="$(EngineDir)\Plugins\Slate\SlateRemote\Binaries\Android\SpaceRTS-SlateRemote-armv7-es2.a" Type="StaticLibrary" />
+  </BuildProducts>
+  <RuntimeDependencies />
+  <bRequireDependenciesToExist>true</bRequireDependenciesToExist>
+</BuildReceipt>

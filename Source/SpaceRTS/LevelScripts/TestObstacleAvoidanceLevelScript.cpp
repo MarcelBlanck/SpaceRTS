@@ -21,13 +21,13 @@ void ATestObstacleAvoidanceLevelScript::StartWallTest(FVector Center, float Dist
 	{
 		for (int32 Column = 0; Column < Columns; ++Column)
 		{
-			LeftPosition.X = Center.X + Distance / 2;
-			LeftPosition.Y = Center.Y - HalfWallWidth + Row * RowDistance;
+			LeftPosition.X = Center.X - HalfWallWidth + Row * RowDistance;
+			LeftPosition.Y = Center.Y + Distance / 2; 
 			LeftPosition.Z = Center.Z - HalsWallHeight + Column * ColumnDistance;
 
-			RightPosition.X = Center.X - Distance / 2;
-			RightPosition.Y = Center.Y + HalfWallWidth - Row * RowDistance;
-			RightPosition.Z = Center.Z + HalsWallHeight - Column * ColumnDistance;
+			RightPosition.X = Center.X - HalfWallWidth + Row * RowDistance;
+			RightPosition.Y = Center.Y - Distance / 2;
+			RightPosition.Z = Center.Z - HalsWallHeight + Column * ColumnDistance;
 
 			FRotator LookDirection = FRotationMatrix::MakeFromX(RightPosition - LeftPosition).Rotator();
 			ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(

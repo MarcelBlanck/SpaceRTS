@@ -13,12 +13,6 @@ class SPACERTS_API USteeringAgentComponent : public USphereComponent
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTargetPositionReachedDelegate);
 
 public:
-	USteeringAgentComponent(const FObjectInitializer& ObjectInitializer);
-
-	virtual void BeginPlay() override;
-
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
 	void EnableSteering();
 
 	void DisableSteering();
@@ -75,6 +69,12 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Steering")
 	FVector PreferedVelocity;
 
+	USteeringAgentComponent(const FObjectInitializer& ObjectInitializer);
+
+	virtual void BeginPlay() override;
+
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 private:
 	struct FLine
 	{
@@ -108,8 +108,13 @@ private:
 	int32 ROV2_LinearProgram3(const TArray<FPlane> &Planes, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result);
 	void  ROV2_LinearProgram4(const TArray<FPlane> &Planes, int32 BeginPlane, float Radius, FVector &Result);
 
-	inline static bool SortByDistanceAndPriority(const FObstacleProcessingData& ip1, const FObstacleProcessingData& ip2)
+	inline static bool SortByDistance(const FObstacleProcessingData& ip1, const FObstacleProcessingData& ip2)
 	{
-		return (ip1.DistanceSquared < ip2.DistanceSquared) || ip1.Steering->IsPrioritySignature;
+		return (ip1.DistanceSquared < ip2.DistanceSquared);
+	}
+
+	inline static bool SortByPriority(const FObstacleProcessingData& ip1, const FObstacleProcessingData& ip2)
+	{
+		return (ip1.Steering->IsPrioritySignature && !ip2.Steering->IsPrioritySignature);
 	}
 };

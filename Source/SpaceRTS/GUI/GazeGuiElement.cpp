@@ -99,16 +99,28 @@ void AGazeGuiElement::Select()
 	{
 		SwitchActive = false;
 		StartTriggerAnimation();
+		if (TriggeredSoundCue != nullptr)
+		{
+			UGameplayStatics::PlaySoundAttached(TriggeredSoundCue, RootComponent);
+		}
 	}	
 	else if (GazeGuiElementType == EGazeGuiElementType::Switch && !SwitchActive)
 	{
 		SwitchActive = true;
 		StartSwitchAnimation(SwitchActive);
+		if (SwitchedSoundCue != nullptr)
+		{
+			UGameplayStatics::PlaySoundAttached(SwitchedSoundCue, RootComponent);
+		}
 	}
 	else if (GazeGuiElementType == EGazeGuiElementType::ToggleSwitch)
 	{
 		SwitchActive = !SwitchActive;
 		StartSwitchAnimation(SwitchActive);
+		if (SwitchedSoundCue != nullptr)
+		{
+			UGameplayStatics::PlaySoundAttached(SwitchedSoundCue, RootComponent);
+		}
 	}
 }
 
@@ -133,6 +145,11 @@ void AGazeGuiElement::GazeBegin()
 		OnGazeBegin.Broadcast();
 	}
 
+	if (GazeBeginSoundCue != nullptr)
+	{
+		UGameplayStatics::PlaySoundAttached(GazeBeginSoundCue, RootComponent);
+	}
+
 	StartScaleAnimation(1.2f);
 }
 
@@ -141,6 +158,11 @@ void AGazeGuiElement::GazeEnd()
 	if (OnGazeEnd.IsBound())
 	{
 		OnGazeEnd.Broadcast();
+	}
+
+	if (GazeEndSoundCue != nullptr)
+	{
+		UGameplayStatics::PlaySoundAttached(GazeEndSoundCue, RootComponent);
 	}
 
 	StartScaleAnimation(1.f);

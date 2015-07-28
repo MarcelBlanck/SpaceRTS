@@ -46,12 +46,6 @@ void USteeringAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType
 		if (!Velocity.IsNearlyZero())
 		{
 			Owner->SetActorLocation(Owner->GetActorLocation() + Velocity * DeltaTime);
-			/*
-			float DotToTargetPosition = FVector::DotProduct((TargetPosition - Owner->GetActorLocation()).GetSafeNormal(), Owner->GetActorForwardVector());
-			if (DotToTargetPosition > 0.75)
-			{
-				Owner->SetActorLocation(Owner->GetActorLocation() + Velocity * DeltaTime);
-			}*/
 
 			if (FocusActor == nullptr)
 			{
@@ -102,8 +96,11 @@ void USteeringAgentComponent::CalculatePreferedVelocity()
 {
 	if (IsSteeringEnabled)
 	{
-		PreferedVelocity = (TargetPosition - Owner->GetActorLocation()).GetClampedToMaxSize(MaxVelocity);
-		
+		FVector TargetVector = TargetPosition - Owner->GetActorLocation();
+		float DotToTargetPosition = FVector::DotProduct((TargetVector).GetSafeNormal(), Owner->GetActorForwardVector());
+		float SpeedFactor = FMath::Max(((DotToTargetPosition + 1.f) / 2.f), 0.1f);
+		PreferedVelocity = (TargetPosition - Owner->GetActorLocation()).GetClampedToMaxSize(MaxVelocity) * SpeedFactor;
+
 		if (PreferedVelocity.IsNearlyZero())
 		{
 			OnTargetPositionReached.Broadcast();
@@ -113,8 +110,6 @@ void USteeringAgentComponent::CalculatePreferedVelocity()
 		{
 			IsTargetPositionReachedReported = false;
 		}
-
-		return;
 	}
 	else
 	{
@@ -138,7 +133,7 @@ void USteeringAgentComponent::ComputeNewVelocity(UWorld* World, float DeltaTime)
 	// Check for Obstacles in Range using the Radar
 	bool PriotitySignatureNear = false;
 	TArray<FObstacleProcessingData> ObstaclesInRange;
-	int ObstaclesInRangeCount = 0;
+	int32 ObstaclesInRangeCount = 0;
 	{
 		TArray<FHitResult> RadarHits;
 		GetRadarBlipResult(OwnerLocation, World, RadarHits);
@@ -169,10 +164,19 @@ void USteeringAgentComponent::ComputeNewVelocity(UWorld* World, float DeltaTime)
 				}
 			}
 		}
-		ObstaclesInRange.Sort(USteeringAgentComponent::SortByDistanceAndPriority);
+
+		// We only want to comute the neares obstacles to compute less
+		ObstaclesInRange.Sort(USteeringAgentComponent::SortByDistance);
+		
+		// We do now want to crash into planets just to avoid a little rock 
+		if (PriotitySignatureNear)
+		{
+			ObstaclesInRange.Sort(USteeringAgentComponent::SortByPriority);
+		}
 	}
 
-	int32 ActualObstaclesToCompute = (PriotitySignatureNear) ? ObstaclesInRangeCount : FMath::Min(MaxComputedNeighbors, ObstaclesInRangeCount);
+	int32 ActualObstaclesToCompute = FMath::Min(MaxComputedNeighbors, ObstaclesInRangeCount);
+
 	for (int32 i = 0; i < ActualObstaclesToCompute; ++i)
 	{
 		const FObstacleProcessingData& Obstacle = ObstaclesInRange[i];
@@ -234,7 +238,7 @@ void USteeringAgentComponent::ComputeNewVelocity(UWorld* World, float DeltaTime)
 		Planes.Add(Plane);
 	}
 
-	// Programms		
+	// Start ROV2 algorithm calculations		
 	const int32 PlaneFail = ROV2_LinearProgram3(Planes, MaxVelocity, PreferedVelocity, false, NewVelocity);
 
 	if (PlaneFail < Planes.Num())
@@ -248,7 +252,7 @@ bool USteeringAgentComponent::GetRadarBlipResult(FVector const & OwnerLocation, 
 	TArray<AActor*> ActorsToIgnore;
 	ActorsToIgnore.Add(Owner);
 	return UKismetSystemLibrary::SphereTraceMulti_NEW(World, OwnerLocation, OwnerLocation + Owner->GetActorForwardVector(), ScanRadius,
-		ETraceTypeQuery::TraceTypeQuery3, false, ActorsToIgnore, EDrawDebugTrace::None, OutHits, false);
+				ETraceTypeQuery::TraceTypeQuery3, false, ActorsToIgnore, EDrawDebugTrace::None, OutHits, false);
 }
 
 bool USteeringAgentComponent::ROV2_LinearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, const FLine &Line, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result)

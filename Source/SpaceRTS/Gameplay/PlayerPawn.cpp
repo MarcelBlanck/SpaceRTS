@@ -80,8 +80,8 @@ void APlayerPawn::BeginPlay()
 
 	OnEngageMovmentDelegate.BindUFunction(this, TEXT("OnEngageMovement"));
 	ActionIndicator->GetOnEngageMovementDelegate().Add(OnEngageMovmentDelegate);
-	//ActionIndicator->GetOnEngageAttackDelegate().AddDynamic(this, &APlayerPawn::OnEngageAttack);
-	//ActionIndicator->GetOnEngageInteractionDelegate().AddDynamic(this, &APlayerPawn::OnEngageInteraction);
+	//ActionIndicator->GetOnEngageAttackDelegate().AddDynamic(this, &APlayerPawn::OnEngageAttack); // Needs Script Delegate also
+	//ActionIndicator->GetOnEngageInteractionDelegate().AddDynamic(this, &APlayerPawn::OnEngageInteraction); // Needs Script Delegate also
 
 	OnGearVRTouchpadTapDelegate.BindUFunction(this, TEXT("OnLookInteraction"));
 	TouchpadGearVR->OnSingleTap.Add(OnGearVRTouchpadTapDelegate);

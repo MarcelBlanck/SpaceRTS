@@ -15,6 +15,11 @@ class SPACERTS_API ASteeringLevelScriptActor : public ALevelScriptActor
 	GENERATED_BODY()
 	
 public:
+	void RegisterSteeringAgent(ISteeringAgentInterface* SteeringAgent);
+
+	void UnregisterSteeringAgent(ISteeringAgentInterface* SteeringAgent);
+
+protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Level Data")
 	FName LevelName;
 
@@ -31,10 +36,6 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void Tick(float DeltaSeconds) override;
-
-	void RegisterSteeringAgent(ISteeringAgentInterface* SteeringAgent);
-
-	void UnregisterSteeringAgent(ISteeringAgentInterface* SteeringAgent);
 
 private:
 	TArray<ISteeringAgentInterface*> SteeringAgentList;

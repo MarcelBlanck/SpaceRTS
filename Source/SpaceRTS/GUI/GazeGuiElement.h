@@ -46,6 +46,18 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Gaze Gui")
 	TArray<UTextRenderComponent*> TextRenderComponents;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Sounds")
+	USoundCue* GazeBeginSoundCue;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Sounds")
+	USoundCue* GazeEndSoundCue;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Sounds")
+	USoundCue* TriggeredSoundCue;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Sounds")
+	USoundCue* SwitchedSoundCue;
+
 	AGazeGuiElement(const FObjectInitializer& ObjectInitializer);
 
 	virtual void OnConstruction(const FTransform& Transform) override;
