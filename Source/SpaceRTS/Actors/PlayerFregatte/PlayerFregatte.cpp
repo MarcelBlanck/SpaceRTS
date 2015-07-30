@@ -15,8 +15,8 @@ APlayerFregatte::APlayerFregatte(const FObjectInitializer& ObjectInitializer) :
 			MaterialAsset(TEXT("Material'/Game/Actors/SpaceShipTest/_Meshes/MAT_Human_SPaceship.MAT_Human_SPaceship'")),
 			MeshAsset(TEXT("StaticMesh'/Game/Actors/SpaceShipTest/_Meshes/PBR_Test.PBR_Test'"))
 		{
-			checkf(MaterialAsset.Object, TEXT("Did not find Material'/Game/Testing/TestAssets/TestObjects/MAT_TestShip.MAT_TestShip' - Maybe the asset was moved or renamed."));
-			checkf(MeshAsset.Object, TEXT("Did not find StaticMesh'/Game/Testing/TestAssets/TestObjects/TestShip.TestShip' - Maybe the asset was moved or renamed."));
+			checkf(MaterialAsset.Object, TEXT("Did not find Material'/Game/Actors/SpaceShipTest/_Meshes/MAT_Human_SPaceship.MAT_Human_SPaceship' - Maybe the asset was moved or renamed."));
+			checkf(MeshAsset.Object, TEXT("Did not find StaticMesh'/Game/Actors/SpaceShipTest/_Meshes/PBR_Test.PBR_Test' - Maybe the asset was moved or renamed."));
 		}
 	};
 	static FConstructorStatics ConstructorStatics;

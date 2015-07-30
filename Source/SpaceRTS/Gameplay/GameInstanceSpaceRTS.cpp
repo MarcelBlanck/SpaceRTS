@@ -16,3 +16,7 @@ UGameInstanceSpaceRTS::UGameInstanceSpaceRTS(const FObjectInitializer& ObjectIni
 
 }
 
+void UGameInstanceSpaceRTS::NotifyOnPlayerPawnChanged()
+{
+	OnPlayerPawnChanged.Broadcast();
+}

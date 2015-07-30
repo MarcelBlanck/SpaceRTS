@@ -19,6 +19,8 @@ class SPACERTS_API UGameInstanceSpaceRTS : public UGameInstance
 {
 	GENERATED_BODY()
 	
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerPawnChanged);
+
 public:
 	UGameInstanceSpaceRTS(const FObjectInitializer& ObjectInitializer);
 
@@ -39,4 +41,10 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = PlayerOptions)
 	FLinearColor GuiHighlightColor;
+
+	UFUNCTION(BlueprintCallable, Category = Updating)
+	void NotifyOnPlayerPawnChanged();
+
+	UPROPERTY(BlueprintAssignable)
+	FOnPlayerPawnChanged OnPlayerPawnChanged;
 };
