@@ -13,6 +13,9 @@ class SPACERTS_API USteeringAgentComponent : public USphereComponent
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTargetPositionReachedDelegate);
 
 public:
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Radar")
+	float ScanRadius;
+
 	void EnableSteering();
 
 	void DisableSteering();
@@ -47,9 +50,6 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Steering")
 	AActor* FocusActor;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Radar")
-	float ScanRadius;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Radar")
 	TEnumAsByte<ETraceTypeQuery> TraceType;
@@ -92,8 +92,9 @@ private:
 	{
 		AActor* ObstacleActor;
 		USteeringAgentComponent* Steering;
-		FVector RelativePosition; // Distance from Signature to Signature
-		float DistanceSquared; // Squared distance from Signature to Signature
+		FVector RelativePosition; // Distance from Actor To Actor
+		float DistanceSquared; // Squared distance Actor To Actor
+		float SignatureDistance;
 	};
 
 	AActor* Owner; // Faster access to owner, only needs to be checked on begin play
@@ -108,13 +109,8 @@ private:
 	int32 ROV2_LinearProgram3(const TArray<FPlane> &Planes, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result);
 	void  ROV2_LinearProgram4(const TArray<FPlane> &Planes, int32 BeginPlane, float Radius, FVector &Result);
 
-	inline static bool SortByDistance(const FObstacleProcessingData& ip1, const FObstacleProcessingData& ip2)
+	inline static bool SortBySignatureDistance(const FObstacleProcessingData& ip1, const FObstacleProcessingData& ip2)
 	{
-		return (ip1.DistanceSquared < ip2.DistanceSquared);
-	}
-
-	inline static bool SortByPriority(const FObstacleProcessingData& ip1, const FObstacleProcessingData& ip2)
-	{
-		return (ip1.Steering->IsPrioritySignature && !ip2.Steering->IsPrioritySignature);
+		return (ip1.SignatureDistance < ip2.SignatureDistance);
 	}
 };

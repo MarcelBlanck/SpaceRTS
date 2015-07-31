@@ -12,7 +12,7 @@ USteeringAgentComponent::USteeringAgentComponent(const FObjectInitializer& Objec
 	Super(ObjectInitializer),
 	MaxVelocity(4000.f),
 	ScanRadius(2200.f),
-	MaxComputedNeighbors(10),
+	MaxComputedNeighbors(9),
 	TimeHorizon(10.0f),
 	IsTargetPositionReachedReported(false),
 	FocusActor(nullptr)
@@ -97,17 +97,20 @@ void USteeringAgentComponent::CalculatePreferedVelocity()
 	if (IsSteeringEnabled)
 	{
 		FVector TargetVector = TargetPosition - Owner->GetActorLocation();
-		float DotToTargetPosition = FVector::DotProduct((TargetVector).GetSafeNormal(), Owner->GetActorForwardVector());
-		float SpeedFactor = FMath::Max(((DotToTargetPosition + 1.f) / 2.f), 0.1f);
-		PreferedVelocity = (TargetPosition - Owner->GetActorLocation()).GetClampedToMaxSize(MaxVelocity) * SpeedFactor;
 
-		if (PreferedVelocity.IsNearlyZero())
+		if (TargetVector.IsNearlyZero())
 		{
+			PreferedVelocity.Set(0.f, 0.f, 0.f);
+
 			OnTargetPositionReached.Broadcast();
 			IsTargetPositionReachedReported = true;
 		}
 		else
 		{
+			float DotToTargetPosition = FVector::DotProduct((TargetVector).GetSafeNormal(), Owner->GetActorForwardVector());
+			float SpeedFactor = FMath::Max(((DotToTargetPosition + 1.f) / 2.f), 0.1f);
+			PreferedVelocity = (TargetPosition - Owner->GetActorLocation()).GetClampedToMaxSize(MaxVelocity) * SpeedFactor;
+
 			IsTargetPositionReachedReported = false;
 		}
 	}
@@ -132,16 +135,16 @@ void USteeringAgentComponent::ComputeNewVelocity(UWorld* World, float DeltaTime)
 
 	// Check for Obstacles in Range using the Radar
 	bool PriotitySignatureNear = false;
-	TArray<FObstacleProcessingData> ObstaclesInRange;
-	int32 ObstaclesInRangeCount = 0;
+	TArray<FObstacleProcessingData> HighPrioObstaclesInRange;
+	TArray<FObstacleProcessingData> LowPrioObstaclesInRange;	
+	
 	{
 		TArray<FHitResult> RadarHits;
 		GetRadarBlipResult(OwnerLocation, World, RadarHits);
-		ObstaclesInRangeCount = RadarHits.Num();
-
-		if (ObstaclesInRangeCount > 0)
+		int32 RadarHitCount = RadarHits.Num();
+		if (RadarHitCount > 0)
 		{
-			for (int32 i = 0; i < ObstaclesInRangeCount; ++i)
+			for (int32 i = 0; i < RadarHitCount; ++i)
 			{
 				AActor* HitActor = RadarHits[i].Actor.Get();
 				ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(HitActor);
@@ -150,36 +153,46 @@ void USteeringAgentComponent::ComputeNewVelocity(UWorld* World, float DeltaTime)
 					USteeringAgentComponent* Steering = SteeringAgent->GetSteeringAgentComponent();
 					if (Steering != nullptr)
 					{
-						uint32 index = ObstaclesInRange.AddUninitialized();
-						ObstaclesInRange[index].ObstacleActor = HitActor;
-						ObstaclesInRange[index].Steering = Steering;
-						ObstaclesInRange[index].RelativePosition = HitActor->GetActorLocation() - OwnerLocation;
-						ObstaclesInRange[index].DistanceSquared = (HitActor->GetActorLocation() - OwnerLocation).SizeSquared();
-				
+						TArray<FObstacleProcessingData>* ObstaclesInRangeList;
 						if (Steering->IsPrioritySignature)
 						{
-							PriotitySignatureNear = true;
+							ObstaclesInRangeList = &HighPrioObstaclesInRange;
 						}
+						else
+						{
+							ObstaclesInRangeList = &LowPrioObstaclesInRange;
+						}
+
+						uint32 Index = ObstaclesInRangeList->AddUninitialized();
+						FObstacleProcessingData* ProcessingData = &(ObstaclesInRangeList->GetData()[Index]);
+						ProcessingData->ObstacleActor = HitActor;
+						ProcessingData->Steering = Steering;
+						ProcessingData->RelativePosition = HitActor->GetActorLocation() - OwnerLocation;
+						ProcessingData->DistanceSquared = (ProcessingData->RelativePosition).SizeSquared();
+						ProcessingData->SignatureDistance = FMath::Sqrt(ProcessingData->DistanceSquared) - SphereRadius - Steering->SphereRadius;
 					}
 				}
 			}
 		}
 
-		// We only want to comute the neares obstacles to compute less
-		ObstaclesInRange.Sort(USteeringAgentComponent::SortByDistance);
-		
-		// We do now want to crash into planets just to avoid a little rock 
-		if (PriotitySignatureNear)
+		HighPrioObstaclesInRange.Sort(USteeringAgentComponent::SortBySignatureDistance);
+		if (HighPrioObstaclesInRange.Num() < MaxComputedNeighbors)
 		{
-			ObstaclesInRange.Sort(USteeringAgentComponent::SortByPriority);
+			LowPrioObstaclesInRange.Sort(USteeringAgentComponent::SortBySignatureDistance);
+			HighPrioObstaclesInRange.Append(LowPrioObstaclesInRange);
+		}
+
+		for (int32 i = 0; i < HighPrioObstaclesInRange.Num(); ++i)
+		{
+			//UE_LOG(Generic, Warning, TEXT("%d %f %d %s"), i, HighPrioObstaclesInRange[i].SignatureDistance, HighPrioObstaclesInRange[i].Steering->IsPrioritySignature, *(HighPrioObstaclesInRange[i].Steering->GetOwner()->GetName()));
 		}
 	}
 
-	int32 ActualObstaclesToCompute = FMath::Min(MaxComputedNeighbors, ObstaclesInRangeCount);
+	int32 ActualObstaclesToCompute = FMath::Min(MaxComputedNeighbors, HighPrioObstaclesInRange.Num());
 
 	for (int32 i = 0; i < ActualObstaclesToCompute; ++i)
 	{
-		const FObstacleProcessingData& Obstacle = ObstaclesInRange[i];
+		const FObstacleProcessingData& Obstacle = HighPrioObstaclesInRange[i];
 
 		const FVector RelativePosition = Obstacle.RelativePosition;
 		const FVector RelativeVelocity = OwnerVelocity - Obstacle.Steering->Velocity;
@@ -253,6 +266,7 @@ bool USteeringAgentComponent::GetRadarBlipResult(FVector const & OwnerLocation, 
 	ActorsToIgnore.Add(Owner);
 	return UKismetSystemLibrary::SphereTraceMulti_NEW(World, OwnerLocation, OwnerLocation + Owner->GetActorForwardVector(), ScanRadius,
 				ETraceTypeQuery::TraceTypeQuery3, false, ActorsToIgnore, EDrawDebugTrace::None, OutHits, false);
+
 }
 
 bool USteeringAgentComponent::ROV2_LinearProgram1(const TArray<FPlane> &Planes, int32 PlaneNo, const FLine &Line, float Radius, const FVector &OptVelocity, bool DirectionOpt, FVector &Result)
