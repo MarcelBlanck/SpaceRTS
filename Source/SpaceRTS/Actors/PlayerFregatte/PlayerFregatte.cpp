@@ -1,6 +1,6 @@
 ﻿
 
-#include "SpaceRTS.h"
+#include "SpaceRTS.h"		
 #include "PlayerFregatte.h"
 
 APlayerFregatte::APlayerFregatte(const FObjectInitializer& ObjectInitializer) :
@@ -34,7 +34,7 @@ APlayerFregatte::APlayerFregatte(const FObjectInitializer& ObjectInitializer) :
 	Mesh->SetEnableGravity(false);
 	Mesh->BodyInstance.SetInstanceNotifyRBCollision(false);
 	Mesh->BodyInstance.SetCollisionProfileName("Selectable");
-	Mesh->SetRelativeRotation(FRotator(0.f, 280.f, 0.f));
+	Mesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 	Mesh->AttachTo(RootComponent);
 
 	SteeringAgentComponent->SetMaxVelocity(1600.f);
