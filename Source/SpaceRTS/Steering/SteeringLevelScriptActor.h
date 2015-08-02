@@ -20,24 +20,16 @@ public:
 	void UnregisterSteeringAgent(ISteeringAgentInterface* SteeringAgent);
 
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Level Data")
-	FName LevelName;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "LevelData")
-	int32 FrameIndex;
-
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Obstacle Avoidance")
 	int32 ComputedSteeringAgentsPerFrame;
 
 	ASteeringLevelScriptActor(const FObjectInitializer& ObjectInitializer);
 
-	virtual void BeginPlay() override;
-
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
+	int32 FrameIndex;
+
 	TArray<ISteeringAgentInterface*> SteeringAgentList;
 
 	int32 SteeringAgentCount;

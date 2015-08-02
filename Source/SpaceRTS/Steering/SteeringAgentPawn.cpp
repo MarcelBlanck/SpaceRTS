@@ -37,15 +37,32 @@ void ASteeringAgentPawn::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 }
 
-USteeringAgentComponent* ASteeringAgentPawn::GetSteeringAgentComponent()
+void ASteeringAgentPawn::SetTargetPosition(const FVector& TargetPosition)
 {
-	return SteeringAgentComponent;
+	SteeringAgentComponent->SetTargetPosition(TargetPosition);
 }
 
 void ASteeringAgentPawn::CalculatePreferedVelocity()
 {
-	if (SteeringAgentComponent != nullptr)
-	{
-		SteeringAgentComponent->CalculatePreferedVelocity();
-	}
+	SteeringAgentComponent->CalculatePreferedVelocity();
+}
+
+void ASteeringAgentPawn::ComputeNewVelocity(UWorld* World, float DeltaTime)
+{
+	SteeringAgentComponent->ComputeNewVelocity(World, DeltaTime);
+}
+
+const FVector& ASteeringAgentPawn::GetSteeringVelocity()
+{
+	return SteeringAgentComponent->GetVelocity();
+}
+
+bool ASteeringAgentPawn::IsPrioritySignature()
+{
+	return SteeringAgentComponent->GetIsPrioritySignature();
+}
+
+float ASteeringAgentPawn::GetSphereRadius()
+{
+	return SteeringAgentComponent->GetSphereRadius();
 }

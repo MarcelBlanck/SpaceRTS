@@ -30,33 +30,30 @@ void ATestObstacleAvoidanceLevelScript::StartWallTest(FVector Center, float Dist
 			RightPosition.Z = Center.Z - HalsWallHeight + Column * ColumnDistance;
 
 			FRotator LookDirection = FRotationMatrix::MakeFromX(RightPosition - LeftPosition).Rotator();
+			
 			ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(
 				World->SpawnActor(APlayerFregatte::StaticClass(),
 				&LeftPosition,
 				&LookDirection));
 
-			SpawnedActors.Add(Cast<AActor>(SteeringAgent));
-
-			USteeringAgentComponent* SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
-			if (SteeringAgentComponent != nullptr)
+			if (SteeringAgent != nullptr)
 			{
-				SteeringAgentComponent->SetTargetPosition(RightPosition);
+				SpawnedActors.Add(Cast<AActor>(SteeringAgent));
+				SteeringAgent->SetTargetPosition(RightPosition);
 			}
 
-
-
 			LookDirection = FRotationMatrix::MakeFromX(LeftPosition - RightPosition).Rotator();
+			
 			SteeringAgent = Cast<ISteeringAgentInterface>(
 				World->SpawnActor(APlayerFregatte::StaticClass(),
 				&RightPosition,
 				&LookDirection));
 
-			SpawnedActors.Add(Cast<AActor>(SteeringAgent));
 
-			SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
-			if (SteeringAgentComponent != nullptr)
+			if (SteeringAgent != nullptr)
 			{
-				SteeringAgentComponent->SetTargetPosition(LeftPosition);
+				SpawnedActors.Add(Cast<AActor>(SteeringAgent));
+				SteeringAgent->SetTargetPosition(LeftPosition);
 			}
 		}
 	}
@@ -90,18 +87,17 @@ void ATestObstacleAvoidanceLevelScript::StartCircularTest(FVector Center, float 
 		TargetPosition.Y = Center.Y - Radius * FMath::Sin(RadDelta * (i + 1));	
 
 		FRotator LookDirection = FRotationMatrix::MakeFromX(TargetPosition - StartPosition).Rotator();
+		
 		ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(
 			World->SpawnActor(APlayerFregatte::StaticClass(),
 							  &StartPosition,
 							  &LookDirection, 
 							  SpawnParams));
 		
-		SpawnedActors.Add(Cast<AActor>(SteeringAgent));
-
-		USteeringAgentComponent* SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
-		if (SteeringAgentComponent != nullptr)
+		if (SteeringAgent != nullptr)
 		{
-			SteeringAgentComponent->SetTargetPosition(TargetPosition);
+			SpawnedActors.Add(Cast<AActor>(SteeringAgent));
+			SteeringAgent->SetTargetPosition(TargetPosition);
 		}
 	}
 }
@@ -119,7 +115,6 @@ void ATestObstacleAvoidanceLevelScript::StartSphereTest(FVector Center, float Ra
 
 	FRotator LookDirection;
 	ISteeringAgentInterface* SteeringAgent;
-	USteeringAgentComponent* SteeringAgentComponent;
 
 	float DeltaTheta = PI / Segments;
 	float DeltaPhi = (2 * PI) / Segments;
@@ -140,14 +135,13 @@ void ATestObstacleAvoidanceLevelScript::StartSphereTest(FVector Center, float Ra
 			TargetPosition = Center - PositionOnSphere;
 
 			LookDirection = FRotationMatrix::MakeFromX(TargetPosition - StartPosition).Rotator();
+			
 			SteeringAgent = Cast<ISteeringAgentInterface>(World->SpawnActor(APlayerFregatte::StaticClass(), &StartPosition, &LookDirection));
-
-			SpawnedActors.Add(Cast<AActor>(SteeringAgent));
-
-			SteeringAgentComponent = SteeringAgent->GetSteeringAgentComponent();
-			if (SteeringAgentComponent != nullptr)
+			
+			if (SteeringAgent != nullptr)
 			{
-				SteeringAgentComponent->SetTargetPosition(TargetPosition);
+				SpawnedActors.Add(Cast<AActor>(SteeringAgent));
+				SteeringAgent->SetTargetPosition(TargetPosition);
 			}
 		}
 	}

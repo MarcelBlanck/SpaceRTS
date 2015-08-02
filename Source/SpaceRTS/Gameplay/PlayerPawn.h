@@ -104,6 +104,8 @@ private:
 	TWeakObjectPtr<class AActor> SelectedActor;
 
 	TScriptDelegate<FWeakObjectPtr> OnEngageMovmentDelegate;
+	TScriptDelegate<FWeakObjectPtr> OnEngageAttackDelegate;
+	TScriptDelegate<FWeakObjectPtr> OnEngageInteractionDelegate;
 
 	TScriptDelegate<FWeakObjectPtr> OnGearVRTouchpadTapDelegate;
 	TScriptDelegate<FWeakObjectPtr> OnGearVRBackKeyDelegate;

@@ -72,7 +72,7 @@ void USteeringAgentComponent::DisableSteering()
 	IsSteeringEnabled = false;
 }
 
-void USteeringAgentComponent::SetTargetPosition(FVector& NewTargetPosition)
+void USteeringAgentComponent::SetTargetPosition(const FVector& NewTargetPosition)
 {
 	TargetPosition = NewTargetPosition;
 }
@@ -136,9 +136,9 @@ void USteeringAgentComponent::ComputeNewVelocity(UWorld* World, float DeltaTime)
 	// Check for Obstacles in Range using the Radar
 	bool PriotitySignatureNear = false;
 	TArray<FObstacleProcessingData> HighPrioObstaclesInRange;
-	TArray<FObstacleProcessingData> LowPrioObstaclesInRange;	
-	
 	{
+		TArray<FObstacleProcessingData> LowPrioObstaclesInRange;
+
 		TArray<FHitResult> RadarHits;
 		GetRadarBlipResult(OwnerLocation, World, RadarHits);
 		int32 RadarHitCount = RadarHits.Num();
@@ -150,27 +150,23 @@ void USteeringAgentComponent::ComputeNewVelocity(UWorld* World, float DeltaTime)
 				ISteeringAgentInterface* SteeringAgent = Cast<ISteeringAgentInterface>(HitActor);
 				if (SteeringAgent != nullptr)
 				{
-					USteeringAgentComponent* Steering = SteeringAgent->GetSteeringAgentComponent();
-					if (Steering != nullptr)
+					TArray<FObstacleProcessingData>* ObstaclesInRangeList;
+					if (SteeringAgent->IsPrioritySignature())
 					{
-						TArray<FObstacleProcessingData>* ObstaclesInRangeList;
-						if (Steering->IsPrioritySignature)
-						{
-							ObstaclesInRangeList = &HighPrioObstaclesInRange;
-						}
-						else
-						{
-							ObstaclesInRangeList = &LowPrioObstaclesInRange;
-						}
-
-						uint32 Index = ObstaclesInRangeList->AddUninitialized();
-						FObstacleProcessingData* ProcessingData = &(ObstaclesInRangeList->GetData()[Index]);
-						ProcessingData->ObstacleActor = HitActor;
-						ProcessingData->Steering = Steering;
-						ProcessingData->RelativePosition = HitActor->GetActorLocation() - OwnerLocation;
-						ProcessingData->DistanceSquared = (ProcessingData->RelativePosition).SizeSquared();
-						ProcessingData->SignatureDistance = FMath::Sqrt(ProcessingData->DistanceSquared) - SphereRadius - Steering->SphereRadius;
+						ObstaclesInRangeList = &HighPrioObstaclesInRange;
 					}
+					else
+					{
+						ObstaclesInRangeList = &LowPrioObstaclesInRange;
+					}
+
+					uint32 Index = ObstaclesInRangeList->AddUninitialized();
+					FObstacleProcessingData* ProcessingData = &(ObstaclesInRangeList->GetData()[Index]);
+					ProcessingData->ObstacleActor = HitActor;
+					ProcessingData->SteeringAgent = SteeringAgent;
+					ProcessingData->RelativePosition = HitActor->GetActorLocation() - OwnerLocation;
+					ProcessingData->DistanceSquared = (ProcessingData->RelativePosition).SizeSquared();
+					ProcessingData->SignatureDistance = FMath::Sqrt(ProcessingData->DistanceSquared) - SphereRadius - SteeringAgent->GetSphereRadius();
 				}
 			}
 		}
@@ -181,23 +177,18 @@ void USteeringAgentComponent::ComputeNewVelocity(UWorld* World, float DeltaTime)
 			LowPrioObstaclesInRange.Sort(USteeringAgentComponent::SortBySignatureDistance);
 			HighPrioObstaclesInRange.Append(LowPrioObstaclesInRange);
 		}
-
-		for (int32 i = 0; i < HighPrioObstaclesInRange.Num(); ++i)
-		{
-			//UE_LOG(Generic, Warning, TEXT("%d %f %d %s"), i, HighPrioObstaclesInRange[i].SignatureDistance, HighPrioObstaclesInRange[i].Steering->IsPrioritySignature, *(HighPrioObstaclesInRange[i].Steering->GetOwner()->GetName()));
-		}
 	}
 
 	int32 ActualObstaclesToCompute = FMath::Min(MaxComputedNeighbors, HighPrioObstaclesInRange.Num());
-
+	
 	for (int32 i = 0; i < ActualObstaclesToCompute; ++i)
 	{
 		const FObstacleProcessingData& Obstacle = HighPrioObstaclesInRange[i];
 
 		const FVector RelativePosition = Obstacle.RelativePosition;
-		const FVector RelativeVelocity = OwnerVelocity - Obstacle.Steering->Velocity;
+		const FVector RelativeVelocity = OwnerVelocity - Obstacle.SteeringAgent->GetSteeringVelocity();
 		const float DistanceSquared = Obstacle.DistanceSquared;
-		const float CombinedRadius = SphereRadius + Obstacle.Steering->SphereRadius;
+		const float CombinedRadius = SphereRadius + Obstacle.SteeringAgent->GetSphereRadius();
 		const float CombinedRadiusSq = CombinedRadius * CombinedRadius;
 
 		FPlane Plane;

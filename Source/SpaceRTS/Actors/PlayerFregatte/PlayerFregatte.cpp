@@ -39,7 +39,7 @@ APlayerFregatte::APlayerFregatte(const FObjectInitializer& ObjectInitializer) :
 
 	SteeringAgentComponent->SetMaxVelocity(1600.f);
 	SteeringAgentComponent->SetSphereRadius(420.f);
-	SteeringAgentComponent->ScanRadius = 2000.f;
+	SteeringAgentComponent->ScanRadius = 6000.f;
 }
 
 ESelectableObjectType APlayerFregatte::GetType()

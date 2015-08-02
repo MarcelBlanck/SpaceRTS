@@ -1,4 +1,4 @@
-
+// Marcel Blanck 2015
 
 #include "SpaceRTS.h"
 #include "PlayerPawn.h"
@@ -75,13 +75,16 @@ void APlayerPawn::BeginPlay()
 	{
 		UHeadMountedDisplayFunctionLibrary::EnableHMD(true);
 		UHeadMountedDisplayFunctionLibrary::EnableLowPersistenceMode(true);
-		UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
 	}
 
 	OnEngageMovmentDelegate.BindUFunction(this, TEXT("OnEngageMovement"));
 	ActionIndicator->GetOnEngageMovementDelegate().Add(OnEngageMovmentDelegate);
-	//ActionIndicator->GetOnEngageAttackDelegate().AddDynamic(this, &APlayerPawn::OnEngageAttack); // Needs Script Delegate also
-	//ActionIndicator->GetOnEngageInteractionDelegate().AddDynamic(this, &APlayerPawn::OnEngageInteraction); // Needs Script Delegate also
+
+	OnEngageAttackDelegate.BindUFunction(this, TEXT("OnEngageAttack"));
+	ActionIndicator->GetOnEngageAttackDelegate().Add(OnEngageAttackDelegate);
+
+	OnEngageInteractionDelegate.BindUFunction(this, TEXT("OnEngageInteraction"));
+	ActionIndicator->GetOnEngageInteractionDelegate().Add(OnEngageInteractionDelegate);
 
 	OnGearVRTouchpadTapDelegate.BindUFunction(this, TEXT("OnLookInteraction"));
 	TouchpadGearVR->OnSingleTap.Add(OnGearVRTouchpadTapDelegate);
@@ -133,20 +136,20 @@ void APlayerPawn::SetupPlayerInputComponent(UInputComponent* InputComponent)
 
 void APlayerPawn::OnBackKey()
 {
-
+	// Directly handled in Level Blueprint atm (needs to be handled here to cancel selections etc.
 }
 
 void APlayerPawn::OnLookInteraction()
 {
-	ISelectableObject* LookAtSelectable = Cast<ISelectableObject>(CurrentLookAtActor.Get());
-	if (LookAtSelectable != nullptr)
+	if (CurrentLookAtActor.IsValid())
 	{
-		switch (LookAtSelectable->GetType())
+		ISelectableObject* CurrentLookAtSelectable = Cast<ISelectableObject>(CurrentLookAtActor.Get());
+		switch (CurrentLookAtSelectable->GetType())
 		{
 		case ESelectableObjectType::Prop:
 		case ESelectableObjectType::Resource:
 		case ESelectableObjectType::EnemySpaceship:
-			LookAtSelectable->Select();
+			CurrentLookAtSelectable->Select();
 			if (SelectedActor.IsValid())
 			{
 				ISelectableObject* SelectedSelectable = Cast<ISelectableObject>(SelectedActor.Get());
@@ -155,7 +158,7 @@ void APlayerPawn::OnLookInteraction()
 			SelectedActor = CurrentLookAtActor.Get();
 			break;
 		case ESelectableObjectType::UI:
-			LookAtSelectable->Select();
+			CurrentLookAtSelectable->Select();
 			// Do not save selection, just trigger the ui element
 			break;
 		case ESelectableObjectType::PlayerControlledSpaceship:
@@ -190,21 +193,22 @@ void APlayerPawn::OnLookUp(float Value)
 
 void APlayerPawn::UpdateLookAtActorAndRecticle()
 {
-	FCollisionQueryParams TraceParams(FName(TEXT("CurrentLookAtActorTrace")), false, this);
-
+	// Get the look orientation vector from the HMD or from the Camera rotation if no HMD is available
 	FVector DeviceRotationVector;
 	if (UHeadMountedDisplayFunctionLibrary::IsHeadMountedDisplayEnabled())
 	{
 		FRotator DeviceRotation;
 		FVector DevicePosition;
 		UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(DeviceRotation, DevicePosition);
-		DeviceRotationVector = DeviceRotation.Vector();
+		DeviceRotationVector =  GetTransform().InverseTransformPosition(DeviceRotation.Vector());
 	}
 	else
 	{
 		DeviceRotationVector = Camera->GetComponentRotation().Vector();
 	}
 
+
+	// Line Trace from camera in look orientation 
 	const FVector Start = GetPawnViewLocation();
 	const FVector End = Start + DeviceRotationVector * 100000;
 
@@ -212,78 +216,79 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 	ActorsToIgnore.Add(this);
 
 	FHitResult HitData(ForceInit);
-	UKismetSystemLibrary::LineTraceSingle_NEW(GetWorld(), Start, End, ETraceTypeQuery::TraceTypeQuery2, 
+	UKismetSystemLibrary::LineTraceSingle_NEW(GetWorld(), Start, End, TRACE_TYPE_CAMERA,
 		false, ActorsToIgnore, EDrawDebugTrace::None, HitData, true);
 
-	AActor* LastLookAtActor = CurrentLookAtActor.Get();
-	ISelectableObject* LastLookAtSelectable = Cast<ISelectableObject>(LastLookAtActor);
-
+	TWeakObjectPtr<class AActor> LastLookAtActor = CurrentLookAtActor;
 	CurrentLookAtActor = HitData.Actor;
-	ISelectableObject* CurrentLookAtSelectable = Cast<ISelectableObject>(CurrentLookAtActor.Get());
 
-	bool bLookAtActorHasChanged = (LastLookAtActor != CurrentLookAtActor);
 
-	// Fire Gaze Events
+	// Fire Gaze Events and reset Gaze cursor if no new actor was hit
+	const bool bLookAtActorHasChanged = (LastLookAtActor != CurrentLookAtActor);
 	if (bLookAtActorHasChanged)
 	{
-		if (LastLookAtSelectable != nullptr)
+		// Fire GazeEnd Event if last looked at Selectable is valid
+		if (LastLookAtActor.IsValid())
 		{
+			ISelectableObject* LastLookAtSelectable = Cast<ISelectableObject>(LastLookAtActor.Get());
 			LastLookAtSelectable->GazeEnd();
 		}
-		if (CurrentLookAtSelectable != nullptr)
+
+		// Fire GazeBegin Event if current looked at Selectable is valid, also set the recticle color
+		// according to Selectable type and play the Recticle animation
+		if (CurrentLookAtActor.IsValid())
 		{
+			ISelectableObject* CurrentLookAtSelectable = Cast<ISelectableObject>(CurrentLookAtActor.Get());
 			CurrentLookAtSelectable->GazeBegin();
-		}
-	}
 
-	// Update Recticle Position, Color and Animation
-	if (CurrentLookAtActor.IsValid())
-	{
-		FVector HitVector = (HitData.ImpactPoint - Start);
-		float HitDistance = HitVector.Size();
-		
-		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotationVector * HitDistance);
-		RecticleRoot->SetRelativeScale3D(FVector(HitDistance / RecticleDefaultDistance));
-
-		if (bLookAtActorHasChanged)
-		{
-			if (CurrentLookAtSelectable != nullptr)
+			switch (CurrentLookAtSelectable->GetType())
 			{
-				switch (CurrentLookAtSelectable->GetType())
-				{
-					case ESelectableObjectType::Prop:
-						Recticle->SetSpriteColor(RecticleColorNeutral);
-						break;
-					case ESelectableObjectType::UI:
-						Recticle->SetSpriteColor(RecticleColorInteract);
-						break;
-					case ESelectableObjectType::Resource:
-						Recticle->SetSpriteColor(RecticleColorInteract);
-						break;
-					case ESelectableObjectType::EnemySpaceship:
-						Recticle->SetSpriteColor(RecticleColorAttack);
-						break;
-					case ESelectableObjectType::PlayerControlledSpaceship:
-						Recticle->SetSpriteColor(RecticleColorFriendly);
-						break;
-				}
-				Recticle->SetPlayRate(RecticleAnimationRate);
-				Recticle->PlayFromStart();
+			case ESelectableObjectType::Prop:
+				Recticle->SetSpriteColor(RecticleColorNeutral);
+				break;
+			case ESelectableObjectType::UI:
+				Recticle->SetSpriteColor(RecticleColorInteract);
+				break;
+			case ESelectableObjectType::Resource:
+				Recticle->SetSpriteColor(RecticleColorInteract);
+				break;
+			case ESelectableObjectType::EnemySpaceship:
+				Recticle->SetSpriteColor(RecticleColorAttack);
+				break;
+			case ESelectableObjectType::PlayerControlledSpaceship:
+				Recticle->SetSpriteColor(RecticleColorFriendly);
+				break;
 			}
-		}	
-	}
-	else
-	{
-		if (bLookAtActorHasChanged)
+			Recticle->SetPlayRate(RecticleAnimationRate);
+			Recticle->PlayFromStart();
+		}
+		else
 		{
+			// otherwise reset the Recticle scale, color and animation
 			Recticle->SetSpriteColor(RecticleColorNeutral);
 			RecticleRoot->SetRelativeScale3D(FVector(1.f));
 			Recticle->SetPlaybackPosition(0.f, false);
 			Recticle->Stop();
 		}
+	}
+
+
+	// Update Recticle position and scale to match the distance to the currently looked at vector
+	if (CurrentLookAtActor.IsValid())
+	{
+		FVector HitVector = (HitData.ImpactPoint - Start);
+		float HitDistance = HitVector.Size();
+		
+		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotationVector * HitDistance); // TODO wrong position if PlayerPawn HMD rotation is not in World space
+		RecticleRoot->SetRelativeScale3D(FVector(HitDistance / RecticleDefaultDistance));
+	}
+	else
+	{
 		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotationVector * RecticleDefaultDistance);
 	}
 	
+
+	// Update the Recticle orientation to always face the player
 	RecticleRoot->SetWorldRotation(FRotationMatrix::MakeFromX(GetPawnViewLocation() - RecticleRoot->GetComponentLocation()).Rotator());
 }
 

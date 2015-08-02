@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "SteeringAgentComponent.h"
 #include "SteeringAgentInterface.generated.h"
 
 UINTERFACE()
@@ -15,7 +14,16 @@ class ISteeringAgentInterface
 {
 	GENERATED_IINTERFACE_BODY()
 
-	virtual USteeringAgentComponent* GetSteeringAgentComponent();
+public:
+	virtual void SetTargetPosition(const FVector& TargetPosition);
 
 	virtual void CalculatePreferedVelocity();
+
+	virtual void ComputeNewVelocity(UWorld* World, float DeltaTime);
+
+	virtual const FVector& GetSteeringVelocity();
+
+	virtual bool IsPrioritySignature();
+
+	virtual float GetSphereRadius();
 };

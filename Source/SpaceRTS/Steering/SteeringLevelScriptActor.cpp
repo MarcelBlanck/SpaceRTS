@@ -5,27 +5,13 @@
 
 ASteeringLevelScriptActor::ASteeringLevelScriptActor(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer),
-	SteeringAgentCount(0U),
-	SteeringComputationGroups(1U),
+	ComputedSteeringAgentsPerFrame(5U),
 	FrameIndex(0U),
-	ComputedSteeringAgentsPerFrame(5U)
+	SteeringAgentList(),
+	SteeringAgentCount(0U),
+	SteeringComputationGroups(1U)
 {
 
-}
-
-void ASteeringLevelScriptActor::BeginPlay()
-{
-	Super::BeginPlay();
-	APlayerController* TargetPC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-	if (TargetPC)
-	{
-		TargetPC->ConsoleCommand(TEXT("t.MaxFPS=60"), true);
-	}
-}
-
-void ASteeringLevelScriptActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
 }
 
 void ASteeringLevelScriptActor::Tick(float DeltaSeconds)
@@ -59,17 +45,12 @@ void ASteeringLevelScriptActor::UpdateSteeringAgents(float DeltaSeconds)
 	if (World == nullptr)
 		return;
 
-	for (ISteeringAgentInterface* SteeringAgent : SteeringAgentList)
-	{
-		SteeringAgent->CalculatePreferedVelocity();
-	}
-
 	int32 CurrentComputationGroup = FrameIndex % SteeringComputationGroups;
 	int32 ComputationGroupOffset = CurrentComputationGroup * ComputedSteeringAgentsPerFrame;
-	
-	SteeringAgentCount = SteeringAgentList.Num();
+
 	for (int32 i = ComputationGroupOffset; i < SteeringAgentCount ; ++i)
 	{
-		SteeringAgentList[i]->GetSteeringAgentComponent()->ComputeNewVelocity(World, DeltaSeconds);
+		SteeringAgentList[i]->CalculatePreferedVelocity();
+		SteeringAgentList[i]->ComputeNewVelocity(World, DeltaSeconds);
 	}
 }

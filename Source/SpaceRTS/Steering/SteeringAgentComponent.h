@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Components/SphereComponent.h"
+#include "SteeringAgentInterface.h"
 #include "SteeringAgentComponent.generated.h"
 
 UCLASS(ClassGroup = (Steering), meta = (BlueprintSpawnableComponent))
@@ -20,7 +21,7 @@ public:
 
 	void DisableSteering();
 
-	void SetTargetPosition(FVector& TargetPosition);
+	void SetTargetPosition(const FVector& TargetPosition);
 
 	void SetFocusActor(AActor* NewFocusActor);
 
@@ -34,6 +35,21 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FTargetPositionReachedDelegate OnTargetPositionReached;
+
+	FORCEINLINE float GetSphereRadius()
+	{
+		return SphereRadius;
+	}
+
+	FORCEINLINE bool GetIsPrioritySignature()
+	{
+		return IsPrioritySignature;
+	}
+
+	FORCEINLINE const FVector& GetVelocity()
+	{
+		return Velocity;
+	}
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Steering")
@@ -91,7 +107,7 @@ private:
 	struct FObstacleProcessingData
 	{
 		AActor* ObstacleActor;
-		USteeringAgentComponent* Steering;
+		class ISteeringAgentInterface* SteeringAgent;
 		FVector RelativePosition; // Distance from Actor To Actor
 		float DistanceSquared; // Squared distance Actor To Actor
 		float SignatureDistance;
