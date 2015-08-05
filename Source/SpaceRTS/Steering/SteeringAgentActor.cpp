@@ -2,19 +2,18 @@
 
 #include "SpaceRTS.h"
 #include "SteeringAgentActor.h"
-#include "SteeringLevelScriptActor.h"
 
 
 ASteeringAgentActor::ASteeringAgentActor(const FObjectInitializer& ObjectInitializer) :
 Super(ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
+	SetActorTickEnabled(false);
 
 	Scene = ObjectInitializer.CreateDefaultSubobject<USceneComponent>(this, TEXT("Scene"));
 	SetRootComponent(Scene);
 
 	SteeringAgentComponent = ObjectInitializer.CreateDefaultSubobject<USteeringAgentComponent>(this, TEXT("SteeringAgentComponent"));
-	SteeringAgentComponent->DisableSteering();
 	SteeringAgentComponent->AttachTo(RootComponent);
 }
 
@@ -22,22 +21,17 @@ void ASteeringAgentActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ASteeringLevelScriptActor* SteeringLevelScript = Cast<ASteeringLevelScriptActor>(GetWorld()->GetLevelScriptActor());
-	if (SteeringLevelScript != nullptr)
-	{
-		SteeringLevelScript->RegisterSteeringAgent(this);
-	}
+	SteeringAgentComponent->DisableSteering();
 }
 
 void ASteeringAgentActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	ASteeringLevelScriptActor* SteeringLevelScript = Cast<ASteeringLevelScriptActor>(GetWorld()->GetLevelScriptActor());
-	if (SteeringLevelScript != nullptr)
-	{
-		SteeringLevelScript->UnregisterSteeringAgent(this);
-	}
+	// Due to performance reasons no shared/wseak pointers are used for the steering backend.
+	// So to be on the save side, the levelscript should definitely know the actor has gone.
+	// DisableSteering will indicate that, if steering was activated in the meantime.
+	SteeringAgentComponent->DisableSteering(); 
 }
 
 void ASteeringAgentActor::SetTargetPosition(const FVector& TargetPosition)

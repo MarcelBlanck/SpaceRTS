@@ -7,8 +7,9 @@
 ASteeringAgentCharacter::ASteeringAgentCharacter(const FObjectInitializer& ObjectInitializer) :
 Super(ObjectInitializer)
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	SteeringAgentComponent = ObjectInitializer.CreateDefaultSubobject<USteeringAgentComponent>(this, TEXT("SteeringAgentComponent"));
-	SteeringAgentComponent->DisableSteering();
 	SteeringAgentComponent->AttachTo(RootComponent);
 }
 
@@ -16,22 +17,17 @@ void ASteeringAgentCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ASteeringLevelScriptActor* SteeringLevelScript = Cast<ASteeringLevelScriptActor>(GetWorld()->GetLevelScriptActor());
-	if (SteeringLevelScript != nullptr)
-	{
-		SteeringLevelScript->RegisterSteeringAgent(this);
-	}
+	SteeringAgentComponent->EnableSteering();
 }
 
 void ASteeringAgentCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	ASteeringLevelScriptActor* SteeringLevelScript = Cast<ASteeringLevelScriptActor>(GetWorld()->GetLevelScriptActor());
-	if (SteeringLevelScript != nullptr)
-	{
-		SteeringLevelScript->UnregisterSteeringAgent(this);
-	}
+	// Due to performance reasons no shared/wseak pointers are used for the steering backend.
+	// So to be on the save side, the levelscript should definitely know the actor has gone.
+	// DisableSteering will indicate that, if steering was activated in the meantime.
+	SteeringAgentComponent->DisableSteering();
 }
 
 void ASteeringAgentCharacter::SetTargetPosition(const FVector& TargetPosition)

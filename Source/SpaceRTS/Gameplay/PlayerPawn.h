@@ -22,6 +22,9 @@ public:
 	UCameraComponent* Camera;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+	USceneComponent* HMDRotationFollower;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 	USceneComponent* RecticleRoot;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")

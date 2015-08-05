@@ -11,6 +11,7 @@
 APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer),
 	Camera(nullptr),
+	HMDRotationFollower(nullptr),
 	MaxInteractionDistance(20000.f),
 	RecticleDefaultDistance(3000.f),
 	RecticleAnimationRate(5.f),
@@ -27,6 +28,9 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 	Camera->AttachTo(RootComponent);
 	Camera->bUsePawnControlRotation = false;
 	Camera->FieldOfView = 90.f;
+
+	HMDRotationFollower = ObjectInitializer.CreateDefaultSubobject<USceneComponent>(this, TEXT("HMDRotationFollower"));
+	HMDRotationFollower->AttachTo(RootComponent);
 
 	RecticleRoot = ObjectInitializer.CreateDefaultSubobject<USceneComponent>(this, TEXT("RecticleRoot"));
 	RecticleRoot->SetRelativeLocation(FVector(RecticleDefaultDistance, 0.f, 0.f));
@@ -53,13 +57,11 @@ APlayerPawn::APlayerPawn(const FObjectInitializer& ObjectInitializer) :
 
 	BackKeyGearVR = ObjectInitializer.CreateDefaultSubobject<UBackKeyGearVR>(this, TEXT("BackKeyGearVR"));
 	BackKeyGearVR->RegisterComponent();
-
-	SteeringAgentComponent->DisableSteering();
 }
 
 FVector APlayerPawn::GetPawnViewLocation() const
 {
-	return (GetActorLocation() * 2) - Camera->GetComponentLocation();
+	return Camera->GetComponentLocation();
 }
 
 void APlayerPawn::OnConstruction(const FTransform& Transform)
@@ -86,15 +88,17 @@ void APlayerPawn::BeginPlay()
 	OnEngageInteractionDelegate.BindUFunction(this, TEXT("OnEngageInteraction"));
 	ActionIndicator->GetOnEngageInteractionDelegate().Add(OnEngageInteractionDelegate);
 
+	bBlockInput = false;
+	AutoReceiveInput = EAutoReceiveInput::Player0;
+	InputPriority = 1;
+
+	SteeringAgentComponent->DisableSteering();
+
 	OnGearVRTouchpadTapDelegate.BindUFunction(this, TEXT("OnLookInteraction"));
 	TouchpadGearVR->OnSingleTap.Add(OnGearVRTouchpadTapDelegate);
 
 	OnGearVRBackKeyDelegate.BindUFunction(this, TEXT("OnBackKey"));
 	BackKeyGearVR->OnBackClicked.Add(OnGearVRBackKeyDelegate);
-
-	bBlockInput = false;
-	AutoReceiveInput = EAutoReceiveInput::Player0;
-	InputPriority = 1;
 }
 
 
@@ -127,11 +131,14 @@ void APlayerPawn::Tick(float DeltaSeconds)
 void APlayerPawn::SetupPlayerInputComponent(UInputComponent* InputComponent)
 {
 	Super::SetupPlayerInputComponent(InputComponent);
-	check(InputComponent);
 
+#if PLATFORM_ANDROID == 1
+	// Adding debug controls for editor and PC builds
+	check(InputComponent);
 	InputComponent->BindAction("LookInteraction", EInputEvent::IE_Pressed, this, &APlayerPawn::OnLookInteraction);
 	InputComponent->BindAxis("LookRight", this, &APlayerPawn::OnLookRight);
 	InputComponent->BindAxis("LookUp", this, &APlayerPawn::OnLookUp);
+#endif
 }
 
 void APlayerPawn::OnBackKey()
@@ -141,6 +148,8 @@ void APlayerPawn::OnBackKey()
 
 void APlayerPawn::OnLookInteraction()
 {
+	UE_LOG(Generic, Warning, TEXT("APlayerPawn::OnLookInteraction"));
+
 	if (CurrentLookAtActor.IsValid())
 	{
 		ISelectableObject* CurrentLookAtSelectable = Cast<ISelectableObject>(CurrentLookAtActor.Get());
@@ -149,6 +158,7 @@ void APlayerPawn::OnLookInteraction()
 		case ESelectableObjectType::Prop:
 		case ESelectableObjectType::Resource:
 		case ESelectableObjectType::EnemySpaceship:
+			UE_LOG(Generic, Warning, TEXT("APlayerPawn::OnLookInteraction A"));
 			CurrentLookAtSelectable->Select();
 			if (SelectedActor.IsValid())
 			{
@@ -158,10 +168,13 @@ void APlayerPawn::OnLookInteraction()
 			SelectedActor = CurrentLookAtActor.Get();
 			break;
 		case ESelectableObjectType::UI:
+			UE_LOG(Generic, Warning, TEXT("APlayerPawn::OnLookInteraction B"));
 			CurrentLookAtSelectable->Select();
 			// Do not save selection, just trigger the ui element
 			break;
 		case ESelectableObjectType::PlayerControlledSpaceship:
+			UE_LOG(Generic, Warning, TEXT("APlayerPawn::OnLookInteraction C"));
+			CurrentLookAtSelectable->Select();
 			ActionIndicator->DisableActionIndication();
 			if (SelectedActor.IsValid())
 			{
@@ -171,10 +184,14 @@ void APlayerPawn::OnLookInteraction()
 			SelectedActor = CurrentLookAtActor.Get();
 			ActionIndicator->EnableActionIndication();
 			break;
+		default:
+			UE_LOG(Generic, Warning, TEXT("APlayerPawn::OnLookInteraction D"));
+			break;
 		}	
 	}
 	else if (ActionIndicator->IsActionIndicationEnabled())
 	{
+		UE_LOG(Generic, Warning, TEXT("APlayerPawn::OnLookInteraction E"));
 		ActionIndicator->EnterSuccessiveState();
 	}
 }
@@ -200,7 +217,8 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 		FRotator DeviceRotation;
 		FVector DevicePosition;
 		UHeadMountedDisplayFunctionLibrary::GetOrientationAndPosition(DeviceRotation, DevicePosition);
-		DeviceRotationVector =  GetTransform().InverseTransformPosition(DeviceRotation.Vector());
+		HMDRotationFollower->SetRelativeRotation(DeviceRotation);
+		DeviceRotationVector = HMDRotationFollower->GetComponentRotation().Vector();
 	}
 	else
 	{
@@ -276,9 +294,7 @@ void APlayerPawn::UpdateLookAtActorAndRecticle()
 	// Update Recticle position and scale to match the distance to the currently looked at vector
 	if (CurrentLookAtActor.IsValid())
 	{
-		FVector HitVector = (HitData.ImpactPoint - Start);
-		float HitDistance = HitVector.Size();
-		
+		float HitDistance = (HitData.ImpactPoint - Start).Size();
 		RecticleRoot->SetWorldLocation(GetPawnViewLocation() + DeviceRotationVector * HitDistance); // TODO wrong position if PlayerPawn HMD rotation is not in World space
 		RecticleRoot->SetRelativeScale3D(FVector(HitDistance / RecticleDefaultDistance));
 	}

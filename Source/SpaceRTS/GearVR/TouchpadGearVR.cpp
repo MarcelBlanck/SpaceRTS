@@ -33,7 +33,7 @@ void UTouchpadGearVR::BeginPlay()
 
 	if (PlayerController == nullptr)
 	{
-		UE_LOG(Generic, Warning, TEXT("The Gesture Recognizer Gear VR Component only works with a connected APlayerController."));
+		UE_LOG(Input, Warning, TEXT("The Gesture Recognizer Gear VR Component only works with a connected APlayerController."));
 		return;
 	}
 }
@@ -44,8 +44,15 @@ void UTouchpadGearVR::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 
 	if (PlayerController == nullptr)
 	{
-		UE_LOG(Generic, Warning, TEXT("The Gesture Recognizer Gear VR Component only works with a connected APlayerController."));
-		return;
+		// We do not give up
+		APawn* Owner = Cast<APawn, AActor>(GetOwner()); // Owner was null checked before
+
+		PlayerController = Cast<APlayerController, AController>(Owner->GetController());
+		if (PlayerController == nullptr)
+		{
+			UE_LOG(Input, Warning, TEXT("The Gesture Recognizer Gear VR Component only works with a connected APlayerController."));
+			return;
+		}
 	}
 
 	float X, Y;
@@ -63,6 +70,7 @@ void UTouchpadGearVR::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 	
 	if (!bWasTouchDown && bIsTouchDown)
 	{
+		UE_LOG(Input, Display, TEXT("OnTouchUp"));
 		OnTouchDown.Broadcast();
 		bWasTouchDown = true;
 		TouchDownX = X;
@@ -96,23 +104,29 @@ void UTouchpadGearVR::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 	{
 		if (TouchStationary && SecondsSinceTouchDown < TapMaxTime)
 		{
-			OnSingleTap.Broadcast();
 			float TapRealtimeSeconds = GetWorld()->GetRealTimeSeconds();
 			if (TapRealtimeSeconds - LastTapRealtimeSeconds < DoubleTapTime)
 			{
+				UE_LOG(Input, Display, TEXT("OnDoubleTap"));
 				OnDoubleTap.Broadcast();
 				LastTapRealtimeSeconds = -1.f; // Prevent reporting trippletaps
+			}
+			else
+			{
+				UE_LOG(Input, Display, TEXT("OnSingleTap"));
+				OnSingleTap.Broadcast();
 			}
 			LastTapRealtimeSeconds = TapRealtimeSeconds;
 		}
 		else
 		{
 			LastTapRealtimeSeconds = -1.f; // Generic TouchUp is no tap, so double tap recognition should restart
-
 			ReportSwipeEvents(X, Y);
 		}
 
+		UE_LOG(Input, Display, TEXT("OnTouchUp"));
 		OnTouchUp.Broadcast();
+
 		bWasTouchDown = false;
 	}
 	else
@@ -127,6 +141,7 @@ void UTouchpadGearVR::NotifyRelativeFingerMovement(float X, float Y)
 		FMath::Clamp((TouchDownX - X) / TouchPadAverageCoordSize / 2, -1.f, 1.f),
 		FMath::Clamp((TouchDownY - Y) / TouchPadAverageCoordSize / 2, -1.f, 1.f));
 
+	UE_LOG(Input, Display, TEXT("OnRelativeFingerMovement %s"), *(RelativeFingerMovement.ToString()));
 	OnRelativeFingerMovement.Broadcast(RelativeFingerMovement);
 }
 
@@ -144,21 +159,25 @@ void UTouchpadGearVR::ReportSwipeEvents(float X, float Y)
 		{
 			if (SwipedVectorX > 0)
 			{
-				OnSwipeBackward.Broadcast();
+				UE_LOG(Input, Display, TEXT("OnSwipeBackward"));
+				OnSwipeBackward.Broadcast();			
 			}
 			else
 			{
-				OnSwipeForward.Broadcast();
+				UE_LOG(Input, Display, TEXT("OnSwipeForward"));
+				OnSwipeForward.Broadcast();				
 			}
 		}
 		else if (SwipedDistanceY > VerticalSwipeMinDistance && SwipedDistanceY > SwipedDistanceX)
 		{
 			if (SwipedVectorY > 0)
 			{
-				OnSwipeUp.Broadcast();
+				UE_LOG(Input, Display, TEXT("OnSwipeUp"));
+				OnSwipeUp.Broadcast();				
 			}
 			else
 			{
+				UE_LOG(Input, Display, TEXT("OnSwipeDown"));
 				OnSwipeDown.Broadcast();
 			}
 		}

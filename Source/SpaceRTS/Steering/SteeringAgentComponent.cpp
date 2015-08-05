@@ -3,6 +3,7 @@
 #include "SpaceRTS.h"
 #include "SteeringAgentComponent.h"
 #include "SteeringAgentInterface.h"
+#include "SteeringLevelScriptActor.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 #define EPSILON 0.00001f
@@ -10,6 +11,7 @@
 
 USteeringAgentComponent::USteeringAgentComponent(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer),
+	IsSteeringEnabled(false),
 	MaxVelocity(4000.f),
 	ScanRadius(2200.f),
 	MaxComputedNeighbors(9),
@@ -65,11 +67,26 @@ void USteeringAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType
 void USteeringAgentComponent::EnableSteering()
 {
 	IsSteeringEnabled = true;
+	SetComponentTickEnabled(true);
+	
+	ASteeringLevelScriptActor* SteeringLevelScript = Cast<ASteeringLevelScriptActor>(GetWorld()->GetLevelScriptActor());
+	if (SteeringLevelScript != nullptr)
+	{
+		SteeringLevelScript->RegisterSteeringAgent(Cast<ISteeringAgentInterface>(GetOwner()));
+	}
 }
 
 void USteeringAgentComponent::DisableSteering()
 {
 	IsSteeringEnabled = false;
+	SetComponentTickEnabled(false);
+	PreferedVelocity.Set(0.f, 0.f, 0.f);
+
+	ASteeringLevelScriptActor* SteeringLevelScript = Cast<ASteeringLevelScriptActor>(GetWorld()->GetLevelScriptActor());
+	if (SteeringLevelScript != nullptr)
+	{
+		SteeringLevelScript->UnregisterSteeringAgent(Cast<ISteeringAgentInterface>(GetOwner()));
+	}
 }
 
 void USteeringAgentComponent::SetTargetPosition(const FVector& NewTargetPosition)

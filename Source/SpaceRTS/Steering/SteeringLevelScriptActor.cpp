@@ -33,10 +33,11 @@ void ASteeringLevelScriptActor::RegisterSteeringAgent(ISteeringAgentInterface* S
 
 void ASteeringLevelScriptActor::UnregisterSteeringAgent(ISteeringAgentInterface* SteeringAgent)
 {
-	SteeringAgentList.RemoveSingle(SteeringAgent);
-
-	SteeringAgentCount = SteeringAgentList.Num();
-	SteeringComputationGroups = FMath::Max(SteeringAgentCount / ComputedSteeringAgentsPerFrame, 1);
+	if (SteeringAgentList.RemoveSingle(SteeringAgent) > 0)
+	{
+		SteeringAgentCount = SteeringAgentList.Num();
+		SteeringComputationGroups = FMath::Max(SteeringAgentCount / ComputedSteeringAgentsPerFrame, 1);
+	}
 }
 
 void ASteeringLevelScriptActor::UpdateSteeringAgents(float DeltaSeconds)

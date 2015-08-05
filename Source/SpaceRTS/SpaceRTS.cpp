@@ -5,3 +5,5 @@
 IMPLEMENT_PRIMARY_GAME_MODULE(FDefaultGameModuleImpl, SpaceRTS, "SpaceRTS");
 
 DEFINE_LOG_CATEGORY(Generic);
+
+DEFINE_LOG_CATEGORY(Input);
