@@ -1,5 +1,3 @@
-
-
 #include "SpaceRTS.h"
 #include "TouchpadGearVR.h"
 

@@ -18,15 +18,8 @@ void UUniversalMenuGearVR::BeginPlay()
 	AActor* Owner = GetOwner();
 	Owner->EnableInput(PlayerController);
 
-#if PLATFORM_ANDROID == 1
-	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Pressed, this, &UUniversalMenuGearVR::BackPressed).bConsumeInput = false;
-	Owner->InputComponent->BindKey(EKeys::Android_Back, EInputEvent::IE_Released, this, &UUniversalMenuGearVR::BackReleased).bConsumeInput = false;
-#else
-	// Allow debugging with the BackSpace key
-	UE_LOG(Generic, Warning, TEXT("UUniversalMenuGearVR registering debug back key E"));
-	Owner->InputComponent->BindKey(EKeys::B, EInputEvent::IE_Pressed, this, &UUniversalMenuGearVR::BackPressed).bConsumeInput = false;
-	Owner->InputComponent->BindKey(EKeys::B, EInputEvent::IE_Released, this, &UUniversalMenuGearVR::BackReleased).bConsumeInput = false;
-#endif
+	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Pressed, this, &UUniversalMenuGearVR::BackPressed).bConsumeInput = false;
+	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Released, this, &UUniversalMenuGearVR::BackReleased).bConsumeInput = false;
 
 	SetComponentTickEnabled(false);
 }

@@ -6,7 +6,7 @@
 #include "BackKeyGearVR.generated.h"
 
 
-UCLASS( ClassGroup=(GearVR), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup = (GearVR), meta = (BlueprintSpawnableComponent))
 class SPACERTS_API UBackKeyGearVR : public UActorComponent
 {
 	GENERATED_BODY()

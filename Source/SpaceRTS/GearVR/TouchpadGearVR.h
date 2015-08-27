@@ -6,7 +6,7 @@
 #include "TouchpadGearVR.generated.h"
 
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(ClassGroup = (GearVR), meta = (BlueprintSpawnableComponent))
 class SPACERTS_API UTouchpadGearVR : public UActorComponent
 {
 	GENERATED_BODY()
@@ -62,44 +62,44 @@ public:
 	float HorizontalSwipeMinDistance;
 
 
-	/* Delegate to execute when the Gear VR touch pad is touched */
+	/** Delegate to execute when the Gear VR touch pad is touched */
 	UPROPERTY(BlueprintAssignable)
 	FTouchDownDelegate OnTouchDown;
 
-	/* Delegate to execute when the Gear VR touch pad is no longer touched */
+	/** Delegate to execute when the Gear VR touch pad is no longer touched */
 	UPROPERTY(BlueprintAssignable)
 	FTouchUpDelegate OnTouchUp;
 
-	/* Delegate to execute when the touch moves on the Gear VR touch pad
-	* Only executes if bNotifyRelativeFingerMovement is set to true */
+	/** Delegate to execute when the touch moves on the Gear VR Touchpad.
+	 * Only executes if bNotifyRelativeFingerMovement is set to true */
 	UPROPERTY(BlueprintAssignable)
 	FRelativeFingerMovementDelegate OnRelativeFingerMovement;
 
-	/** Delegate to execute when */
+	/** Delegate to execute when a singl tap is recognized */
 	UPROPERTY(BlueprintAssignable)
 	FSingleTapGestureDelegate OnSingleTap;
 
-	/** Delegate to execute when */
+	/** Delegate to execute when a double tap is recognized */
 	UPROPERTY(BlueprintAssignable)
 	FDoubleTapGestureDelegate OnDoubleTap;
 
-	/** Delegate to execute when */
+	/** Delegate to execute when a stationary long press is recognized */
 	UPROPERTY(BlueprintAssignable)
 	FHoldGestureDelegate OnHold;
 
-	/** Delegate to execute when */
+	/** Delegate to execute when a swipe upwards is recognized */
 	UPROPERTY(BlueprintAssignable)
 	FSwipeUpDelegate OnSwipeUp;
 
-	/** Delegate to execute when */
+	/** Delegate to execute when a swipe down is recognized */
 	UPROPERTY(BlueprintAssignable)
 	FSwipeDownDelegate OnSwipeDown;
 
-	/** Delegate to execute when */
+	/** Delegate to execute when a swipe backwards is recognized */
 	UPROPERTY(BlueprintAssignable)
 	FSwipeBackwardDelegate OnSwipeBackward;
 
-	/** Delegate to execute when */
+	/** Delegate to execute when a swipe forward is recognized */
 	UPROPERTY(BlueprintAssignable)
 	FSwipeForwardDelegate OnSwipeForward;
 

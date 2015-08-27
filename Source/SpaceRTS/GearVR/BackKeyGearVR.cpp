@@ -21,15 +21,8 @@ void UBackKeyGearVR::BeginPlay()
 
 	Owner->EnableInput(GetWorld()->GetFirstPlayerController());
 
-#if PLATFORM_ANDROID == 1
 	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Pressed, this, &UBackKeyGearVR::BackPressed).bConsumeInput = false;
 	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Released, this, &UBackKeyGearVR::BackReleased).bConsumeInput = false;
-#else
-	// Allow debugging with Backspace key
-	UE_LOG(Generic, Warning, TEXT("UBackKeyGearVR registering debug back key BackSpace"));
-	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Pressed, this, &UBackKeyGearVR::BackPressed).bConsumeInput = false;
-	GetWorld()->GetFirstPlayerController()->InputComponent->BindAction("Back", EInputEvent::IE_Released, this, &UBackKeyGearVR::BackReleased).bConsumeInput = false;
-#endif
 }
 
 void UBackKeyGearVR::BackPressed()
